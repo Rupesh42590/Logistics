@@ -51,6 +51,8 @@ export default function Login() {
       const role = await login(loginEmail, loginPassword);
       if (role === 'SUPER_ADMIN') {
           navigate('/admin');
+      } else if (role === 'DRIVER') {
+          navigate('/driver');
       } else {
           navigate('/msme');
       }

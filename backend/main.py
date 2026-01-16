@@ -4,7 +4,7 @@ from database import engine, Base
 from contextlib import asynccontextmanager
 import models
 from auth import get_current_user, create_access_token, get_password_hash, verify_password
-from schemas import UserCreate, UserResponse, Token, CompanyCreate, CompanyResponse, OrderCreate, OrderResponse, ZoneCreate, ZoneResponse, VehicleCreate, VehicleResponse
+from schemas import UserCreate, UserResponse, Token, CompanyCreate, CompanyResponse, OrderCreate, OrderResponse, ZoneCreate, ZoneResponse, VehicleCreate, VehicleResponse, DriverCreate, DriverResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from fastapi import Depends, HTTPException, status
@@ -254,7 +254,7 @@ async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), c
     )
 
 @app.get("/orders", response_model=list[OrderResponse])
-@app.get("/orders", response_model=list[OrderResponse])
+
 async def read_orders(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     stmt = select(Order, Vehicle).outerjoin(Vehicle, Order.assigned_vehicle_id == Vehicle.id)
     
@@ -598,7 +598,8 @@ async def create_vehicle(vehicle: VehicleCreate, db: AsyncSession = Depends(get_
         vehicle_number=vehicle.vehicle_number,
         max_volume_m3=vehicle.max_volume_m3,
         max_weight_kg=vehicle.max_weight_kg,
-        zone_id=vehicle.zone_id
+        zone_id=vehicle.zone_id,
+        driver_id=vehicle.driver_id
     )
     
     db.add(new_vehicle)
@@ -677,3 +678,58 @@ async def delete_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db), cu
     await db.commit()
     
     return {"message": "Vehicle deleted successfully"}
+# Driver Management Endpoints
+@app.post("/drivers", response_model=DriverResponse)
+async def create_driver(driver: DriverCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can create drivers")
+    # Check if email already exists
+    result = await db.execute(select(User).where(User.email == driver.email))
+    if result.scalars().first():
+        raise HTTPException(status_code=400, detail="Email already exists")
+    hashed_pwd = get_password_hash(driver.password)
+    new_user = User(name=driver.name, email=driver.email, hashed_password=hashed_pwd, role=models.UserRole.DRIVER)
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+    return DriverResponse(id=new_user.id, name=new_user.name, email=new_user.email, role=new_user.role)
+
+@app.get("/drivers", response_model=list[DriverResponse])
+async def read_drivers(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can list drivers")
+    result = await db.execute(select(User).where(User.role == models.UserRole.DRIVER))
+    return result.scalars().all()
+
+@app.get("/driver/orders", response_model=list[OrderResponse])
+async def get_driver_orders(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.DRIVER:
+        raise HTTPException(status_code=403, detail="Only drivers can view their orders")
+    stmt = select(Order, Vehicle).outerjoin(Vehicle, Order.assigned_vehicle_id == Vehicle.id).where(Vehicle.driver_id == current_user.id)
+    result = await db.execute(stmt)
+    rows = result.all()
+    response = []
+    for o, v in rows:
+        lat, lon = 0.0, 0.0
+        if o.pickup_location:
+            try:
+                lat, lon = map(float, o.pickup_location.split(','))
+            except:
+                pass
+        response.append(OrderResponse(
+            id=o.id,
+            user_id=o.user_id,
+            item_name=o.item_name,
+            length_cm=o.length_cm,
+            width_cm=o.width_cm,
+            height_cm=o.height_cm,
+            weight_kg=o.weight_kg,
+            volume_m3=o.volume_m3,
+            status=o.status,
+            assigned_vehicle_id=o.assigned_vehicle_id,
+            assigned_vehicle_number=v.vehicle_number if v else None,
+            latitude=lat,
+            longitude=lon
+        ))
+    return response
+

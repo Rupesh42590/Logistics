@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import MSMEPortal from './pages/MSMEPortal';
+import DriverDashboard from './pages/DriverDashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Settings from './pages/Settings';
@@ -48,6 +49,14 @@ function App() {
               <ProtectedRoute role="MSME">
                 <AppLayout>
                   <Settings />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/driver" element={
+              <ProtectedRoute role="DRIVER">
+                <AppLayout>
+                  <DriverDashboard />
                 </AppLayout>
               </ProtectedRoute>
             } />

@@ -65,6 +65,7 @@ class VehicleBase(BaseModel):
     max_volume_m3: float
     max_weight_kg: float
     zone_id: Optional[int] = None
+    driver_id: Optional[int] = None
 
 class VehicleCreate(VehicleBase):
     pass
@@ -74,6 +75,24 @@ class VehicleResponse(VehicleBase):
     current_volume_m3: float = 0.0 
     utilization_percentage: float = 0.0
     zone: Optional[ZoneResponse] = None
+    
+    class Config:
+        from_attributes = True
+
+# Driver Schemas
+class DriverBase(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+class DriverCreate(DriverBase):
+    pass
+
+class DriverResponse(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    role: UserRole = UserRole.DRIVER
     
     class Config:
         from_attributes = True

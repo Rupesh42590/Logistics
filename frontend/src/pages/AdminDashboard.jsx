@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ZoneMap from '../components/ZoneMap';
@@ -7,16 +8,28 @@ import { useModal } from '../context/ModalContext';
 import './AdminDashboard.css';
 import '../mobile-overrides.css';
 
+
+
 export default function AdminDashboard() {
   const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState('fleet');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Initialize tab from URL or default to 'fleet'
+  const activeTab = searchParams.get('tab') || 'fleet';
+  
+  const setActiveTab = (tab) => {
+      setSearchParams({ tab });
+  };
+
   const [filter, setFilter] = useState('All Zones');
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
   
   // Data State
   const [vehicles, setVehicles] = useState([]);
   const [orders, setOrders] = useState([]);
   const [zones, setZones] = useState([]);
+  const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
@@ -25,14 +38,16 @@ export default function AdminDashboard() {
       try {
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           
-          const [vehRes, ordRes, zoneRes] = await Promise.all([
+          const [vehRes, ordRes, zoneRes, drvRes] = await Promise.all([
               axios.get('http://localhost:8000/vehicles'),
               axios.get('http://localhost:8000/orders'),
-              axios.get('http://localhost:8000/zones')
+              axios.get('http://localhost:8000/zones'),
+              axios.get('http://localhost:8000/drivers')
           ]);
           setVehicles(vehRes.data);
           setOrders(ordRes.data);
           setZones(zoneRes.data);
+          setDrivers(drvRes.data);
       } catch (err) {
           console.error("Failed to fetch admin data", err);
           if (err.response?.status === 401) {
@@ -112,12 +127,24 @@ export default function AdminDashboard() {
                 >
                     Orders
                 </button>
+                <button 
+                    onClick={() => setActiveTab('drivers')}
+                    className={`tab-btn ${activeTab === 'drivers' ? 'active' : ''}`}
+                >
+                    Drivers
+                </button>
              </div>
              
              {activeTab === 'fleet' && (
                  <button className="btn btn-primary" onClick={() => setIsVehicleModalOpen(true)}>
                     <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
                     Add Vehicle
+                 </button>
+             )}
+             {activeTab === 'drivers' && (
+                 <button className="btn btn-primary" onClick={() => setIsDriverModalOpen(true)}>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+                    Add Driver
                  </button>
              )}
         </div>
@@ -197,15 +224,29 @@ export default function AdminDashboard() {
           </>
       ) : activeTab === 'zones' ? (
           <ZoneManager />
+      ) : activeTab === 'drivers' ? (
+          <DriverManager drivers={drivers} onUpdate={fetchData} />
       ) : (
           <OrderManager orders={orders} onUpdate={fetchData} />
       )}
       
       {isVehicleModalOpen && (
           <AddVehicleModal 
+            drivers={drivers}
+            zones={zones} 
             onClose={() => setIsVehicleModalOpen(false)} 
             onSuccess={() => {
                 setIsVehicleModalOpen(false);
+                fetchData();
+            }}
+          />
+      )}
+      
+      {isDriverModalOpen && (
+          <AddDriverModal 
+            onClose={() => setIsDriverModalOpen(false)} 
+            onSuccess={() => {
+                setIsDriverModalOpen(false);
                 fetchData();
             }}
           />
@@ -745,22 +786,18 @@ function AssignVehicleModal({ order, onClose, onSuccess }) {
     );
 }
 
-function AddVehicleModal({ onClose, onSuccess }) {
+function AddVehicleModal({ onClose, onSuccess, drivers = [], zones = [] }) {
     const { token } = useAuth();
     const { showAlert } = useModal();
-    const [zones, setZones] = useState([]);
-    const [formData, setFormData] = useState({
+     const [formData, setFormData] = useState({
         vehicle_number: '',
         max_weight_kg: '',
         max_volume_m3: '',
-        zone_id: ''
+        zone_id: '',
+        driver_id: ''
     });
 
-    useEffect(() => {
-        axios.get('http://localhost:8000/zones')
-            .then(res => setZones(res.data))
-            .catch(err => console.error(err));
-    }, []);
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -787,7 +824,8 @@ function AddVehicleModal({ onClose, onSuccess }) {
                 ...formData,
                 max_weight_kg: parseFloat(formData.max_weight_kg),
                 max_volume_m3: parseFloat(formData.max_volume_m3),
-                zone_id: parseInt(formData.zone_id)
+                zone_id: parseInt(formData.zone_id),
+                driver_id: formData.driver_id ? parseInt(formData.driver_id) : null
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -815,6 +853,19 @@ function AddVehicleModal({ onClose, onSuccess }) {
                             placeholder="e.g. TS-09-AB-1234"
                             required
                         />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Assigned Driver</label>
+                        <select 
+                            className="form-select"
+                            value={formData.driver_id}
+                            onChange={e => setFormData({...formData, driver_id: e.target.value})}
+                        >
+                            <option value="">Unassigned (Select Driver later)</option>
+                            {drivers && drivers.filter(d => d.role === 'DRIVER').map(d => (
+                                <option key={d.id} value={d.id}>{d.name} ({d.email})</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="form-group">
                         <label className="form-label">Max Weight (kg)</label>
@@ -924,3 +975,83 @@ function AddZoneModal({ geoJson, onClose, onSuccess }) {
 }
 
 
+function DriverManager({ drivers, onUpdate }) {
+    // Simple list for now
+    return (
+        <div className="card table-wrapper">
+             <table className="data-table">
+                <thead className="table-head">
+                    <tr>
+                        <th className="table-th">Name</th>
+                        <th className="table-th">Email</th>
+                        <th className="table-th">Role</th>
+                        <th className="table-th">ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {drivers.map(d => (
+                        <tr key={d.id} className="table-td">
+                            <td style={{ padding: '1rem', fontWeight: '500' }}>{d.name || '-'}</td>
+                            <td style={{ padding: '1rem' }}>{d.email}</td>
+                            <td style={{ padding: '1rem' }}><span className="badge badge-success">{d.role}</span></td>
+                             <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>#{d.id}</td>
+                        </tr>
+                    ))}
+                    {drivers.length === 0 && (
+                        <tr><td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No drivers found. Add one.</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+function AddDriverModal({ onClose, onSuccess }) {
+    const { showAlert } = useModal();
+    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            await axios.post('http://localhost:8000/drivers', formData);
+            showAlert("Success", "Driver created successfully!");
+            onSuccess();
+        } catch (err) {
+            console.error(err);
+            showAlert("Error", err.response?.data?.detail || "Failed to create driver");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '400px' }}>
+                <div className="modal-header">
+                    <h3 className="modal-title">Create Driver Account</h3>
+                    <button onClick={onClose} className="modal-close-btn">&times;</button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label className="form-label">Full Name</label>
+                        <input className="form-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="John Doe" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required placeholder="driver@company.com" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Password</label>
+                        <input type="password" className="form-input" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required placeholder="******" minLength={6} />
+                    </div>
+                    <div className="modal-actions">
+                        <button type="button" onClick={onClose} className="btn" style={{ border: '1px solid var(--border)' }}>Cancel</button>
+                        <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Creating...' : 'Create Driver'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}

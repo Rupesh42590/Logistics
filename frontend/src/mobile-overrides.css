@@ -100,10 +100,11 @@
         margin-bottom: 1.5rem !important;
     }
 
-    /* Map Card */
     .zone-manager-layout > .card:last-child {
         width: 100% !important;
         height: 400px !important;
+        position: relative;
+        z-index: 1 !important;
     }
 }
 
@@ -127,3 +128,26 @@
         width: auto !important;
     }
 }
+
+/* Global Mobile Map Z-Index Fix */
+@media (max-width: 768px) {
+    /* Ensure maps are below sidebar (z-index 10-100) */
+    .location-picker-wrapper,
+    .leaflet-container,
+    .zone-manager-layout > .card:last-child {
+        z-index: 1 !important;
+        position: relative !important;
+    }
+
+    /* Boost Sidebar and Overlays to be absolutely sure */
+    .sidebar {
+        z-index: 5000 !important;
+    }
+    .sidebar-overlay {
+        z-index: 4000 !important;
+    }
+    .mobile-menu-btn {
+        z-index: 6000 !important;
+    }
+}
+

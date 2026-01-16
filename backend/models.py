@@ -7,6 +7,7 @@ from database import Base
 class UserRole(str, enum.Enum):
     SUPER_ADMIN = "SUPER_ADMIN"
     MSME = "MSME"
+    DRIVER = "DRIVER"
 
 class OrderStatus(str, enum.Enum):
     PENDING = "PENDING"
@@ -29,6 +30,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.MSME)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
@@ -56,6 +58,11 @@ class Vehicle(Base):
     
     zone_id = Column(Integer, ForeignKey("zones.id"), nullable=True)
     zone = relationship("Zone", back_populates="vehicles")
+    
+    # New driver association
+    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # Optional relationship to User (driver)
+    driver = relationship("User", backref="vehicles")
     
     orders = relationship("Order", back_populates="vehicle")
 
