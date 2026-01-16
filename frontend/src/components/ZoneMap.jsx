@@ -36,15 +36,30 @@ export default function ZoneMap({ onCreated, zones = [] }) {
 
   const handleCreated = (e) => {
     const layer = e.layer;
+    
+    // Validation: Check if the drawn shape is too small (e.g. user invoked "click" instead of "drag")
+    if (layer.getBounds) {
+        const bounds = layer.getBounds();
+        const southWest = bounds.getSouthWest();
+        const northEast = bounds.getNorthEast();
+        const distance = southWest.distanceTo(northEast); // Distance in meters
+        
+        // If diagonal is less than 50 meters, consider it a mistake (click vs drag)
+        if (distance < 50) {
+            e.layer.remove();
+            showAlert("Invalid Zone", "Zone is too small! Please CLICK and DRAG to draw a box covering an area.");
+            return;
+        }
+    }
+
     if (onCreated) {
         const geoJson = layer.toGeoJSON();
-        // layer.remove(); // Keep it on map or remove? AdminDashboard re-renders with new zone list, so maybe better to let that handle it.
-        // But local drawing layer persists until remove.
-        // We'll leave it to user to clear or let the refresh handle it (though refresh might duplicate if we don't clear).
-        // For now, simpler is valid.
-        onCreated(geoJson);
-        // Clear the drawn shape to avoid confusion with the newly added "official" zone polygon
-        e.layer.remove(); 
+        onCreated(geoJson, () => {
+             e.layer.remove(); 
+        });
+    } else {
+        // If no handler, just remove it immediately to prevent confusion
+        e.layer.remove();
     }
   };
 
@@ -151,6 +166,10 @@ export default function ZoneMap({ onCreated, zones = [] }) {
                 <EditControl
                     position="topright"
                     onCreated={handleCreated}
+                    edit={{
+                        edit: false,
+                        remove: false
+                    }}
                     draw={{
                         rectangle: {
                             showArea: true,

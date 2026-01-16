@@ -365,6 +365,7 @@
     background-color: #fee2e2;
 }
 
+
 /* Responsive Admin Dashboard */
 @media (max-width: 1024px) {
     .stats-grid {
@@ -377,21 +378,27 @@
     }
     
     .zone-manager-layout > .card {
-        height: 400px; /* Fixed height for map/list when stacked */
+        height: 500px; /* Fixed height for map/list when stacked */
     }
 }
 
 @media (max-width: 768px) {
     .page-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center; /* Center items */
+        text-align: center; /* Center text */
         gap: 1rem;
+    }
+
+    .page-title {
+        text-align: center;
     }
     
     .header-actions {
         width: 100%;
         overflow-x: auto; /* Allow scrolling tabs */
         padding-bottom: 0.5rem;
+        justify-content: center; /* Center tabs */
     }
 
     .stats-grid {

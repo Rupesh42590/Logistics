@@ -60,6 +60,28 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}
 
+from schemas import ChangePasswordRequest
+
+@app.post("/auth/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Verify old password
+    if not verify_password(request.old_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Incorrect old password"
+        )
+    
+    # Update with new password
+    hashed_new_pwd = get_password_hash(request.new_password)
+    current_user.hashed_password = hashed_new_pwd
+    
+    await db.commit()
+    return {"message": "Password updated successfully"}
+
 # Signup Endpoint (Combined Company + User for MSME)
 @app.post("/signup/msme", response_model=UserResponse)
 async def signup_msme(

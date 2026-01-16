@@ -13,6 +13,7 @@
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  height: 100dvh;
   z-index: 10;
 }
 

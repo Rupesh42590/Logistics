@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './AppLayout.css';
@@ -31,6 +31,26 @@ export default function AppLayout({ children }) {
   
   // Or we can fully move tabs to routes later. For this step, let's just make the sidebar look good.
   
+
+  const profileRef = useRef(null);
+
+  useEffect(() => {
+      function handleClickOutside(event) {
+          if (profileRef.current && !profileRef.current.contains(event.target)) {
+              setIsProfileOpen(false);
+          }
+      }
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+          document.removeEventListener("mousedown", handleClickOutside);
+      };
+  }, [profileRef]);
+
+  const handleNavClick = () => {
+      // Close sidebar on mobile when a link is clicked
+      setIsSidebarOpen(false);
+  };
+
   return (
     <div className="app-layout">
       {/* Mobile Overlay */}
@@ -76,7 +96,11 @@ export default function AppLayout({ children }) {
             </div>
             <ul className="nav-list">
                 <li>
-                    <Link to={user?.role === 'SUPER_ADMIN' ? '/admin' : '/msme'} className={`nav-link ${isActive(user?.role === 'SUPER_ADMIN' ? '/admin' : '/msme') ? 'active' : ''}`}>
+                    <Link 
+                        to={user?.role === 'SUPER_ADMIN' ? '/admin' : '/msme'} 
+                        className={`nav-link ${isActive(user?.role === 'SUPER_ADMIN' ? '/admin' : '/msme') ? 'active' : ''}`}
+                        onClick={handleNavClick}
+                    >
                         <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         Dashboard
                     </Link>
@@ -84,7 +108,11 @@ export default function AppLayout({ children }) {
                 {/* Mock Links for visuals */}
                 {/* Shipments link removed as per request */}
                  <li>
-                     <Link to={user?.role === 'SUPER_ADMIN' ? '/admin/settings' : '/msme/settings'} className={`nav-link nav-link-muted ${isActive(user?.role === 'SUPER_ADMIN' ? '/admin/settings' : '/msme/settings') ? 'active' : ''}`}>
+                     <Link 
+                        to={user?.role === 'SUPER_ADMIN' ? '/admin/settings' : '/msme/settings'} 
+                        className={`nav-link nav-link-muted ${isActive(user?.role === 'SUPER_ADMIN' ? '/admin/settings' : '/msme/settings') ? 'active' : ''}`}
+                        onClick={handleNavClick}
+                     >
                         <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         Settings
                      </Link>
@@ -93,7 +121,7 @@ export default function AppLayout({ children }) {
         </nav>
 
         {/* User Profile Snippet */}
-        <div className="profile-section">
+        <div className="profile-section" ref={profileRef}>
             {isProfileOpen && (
                 <div className="profile-menu-popup">
                     <div className="profile-info">

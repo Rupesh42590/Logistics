@@ -103,5 +103,10 @@ class OrderResponse(OrderBase):
     class Config:
         from_attributes = True
 
+
 class AssignOrderRequest(BaseModel):
     vehicle_id: int
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str

@@ -5,6 +5,7 @@ import ZoneMap from '../components/ZoneMap';
 import ConfirmModal from '../components/ConfirmModal';
 import { useModal } from '../context/ModalContext';
 import './AdminDashboard.css';
+import '../mobile-overrides.css';
 
 export default function AdminDashboard() {
   const { token } = useAuth();
@@ -105,7 +106,7 @@ export default function AdminDashboard() {
                 >
                     Zone Manager
                 </button>
-                 <button 
+                <button 
                     onClick={() => setActiveTab('orders')}
                     className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
                 >
@@ -121,6 +122,17 @@ export default function AdminDashboard() {
              )}
         </div>
       </div>
+      
+      {/* Mobile FAB for Add Vehicle */}
+      {activeTab === 'fleet' && (
+          <button 
+            className="fab-btn"
+            onClick={() => setIsVehicleModalOpen(true)}
+            aria-label="Add Vehicle"
+          >
+            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+      )}
 
       {activeTab === 'fleet' ? (
           <>
@@ -504,8 +516,8 @@ function ZoneManager() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.5rem', height: '600px' }}>
-        <div className="card" style={{ padding: '1rem', overflowY: 'auto' }}>
+    <div className="zone-manager-layout">
+        <div className="card zone-list">
             <h3 style={{ marginBottom: '1rem', fontWeight: 'bold' }}>Active Zones</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {zones.map(z => (
@@ -568,8 +580,8 @@ function OrderManager({ orders, onUpdate }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   return (
-    <div className="card" style={{ overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <div className="card table-wrapper">
+        <table className="data-table">
             <thead style={{ background: 'var(--background)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 <tr>
                     <th style={{ padding: '1rem', textAlign: 'left' }}>Order ID</th>
@@ -908,4 +920,7 @@ function AddZoneModal({ geoJson, onClose, onSuccess }) {
             </div>
         </div>
     );
+
 }
+
+

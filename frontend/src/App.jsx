@@ -6,6 +6,7 @@ import Signup from './pages/Signup';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
+import './mobile-overrides.css';
 
 import { AuthProvider } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';

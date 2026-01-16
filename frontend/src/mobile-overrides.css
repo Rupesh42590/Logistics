@@ -1,0 +1,129 @@
+/* Existing AdminDashboard CSS content... */
+
+/* Mobile FAB Button */
+.fab-btn {
+  display: none; /* Hidden by default on desktop */
+}
+
+@media (max-width: 768px) {
+  /* Hide standard Add Vehicle button on mobile if exists */
+  .header-actions .btn-primary {
+    display: none;
+  }
+
+  .fab-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 6rem; /* Above menu button (1.5rem + 3.5rem + gap) */
+    right: 1.5rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    z-index: 100;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .fab-btn:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Settings Page Mobile Responsive */
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 1rem !important;
+    text-align: center;
+  }
+
+  .settings-header {
+    margin-bottom: 1.5rem !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .settings-grid {
+    gap: 1.5rem !important;
+  }
+  
+  .settings-row {
+    grid-template-columns: 1fr !important; /* Stack columns */
+    gap: 0.5rem;
+    text-align: center;
+    justify-items: center;
+  }
+  
+  /* Ensure badges and spans align center */
+  .settings-row span {
+    width: auto;
+  }
+
+  .settings-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .settings-section form {
+    width: 100%;
+    margin: 0 auto;
+  }
+  
+  .settings-section h2 {
+    text-align: center;
+    justify-content: center;
+    display: flex;
+  }
+}
+
+/* Zone Manager Mobile Overrides - FORCE BLOCK LAYOUT */
+@media (max-width: 768px) {
+    .zone-manager-layout {
+        display: block !important;
+        height: auto !important;
+        gap: 0 !important;
+    }
+
+    /* List Card */
+    .zone-manager-layout > .card:first-child {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 300px !important; 
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* Map Card */
+    .zone-manager-layout > .card:last-child {
+        width: 100% !important;
+        height: 400px !important;
+    }
+}
+
+/* Order Manager Mobile Overrides */
+@media (max-width: 768px) {
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    /* Ensure table container scrolls */
+    .table-wrapper {
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        display: block !important;
+    }
+
+    .data-table {
+        min-width: 800px !important; /* Force overflow */
+        width: auto !important;
+    }
+}
