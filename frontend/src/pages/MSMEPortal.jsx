@@ -2,89 +2,90 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import LocationPickerMap from '../components/LocationPickerMap';
 import { useAuth } from '../context/AuthContext';
+import { useModal } from '../context/ModalContext';
 import './MSMEPortal.css';
 
 export default function MSMEPortal() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const { user } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { user } = useAuth();
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-  const fetchOrders = async () => {
-      try {
-          const res = await axios.get('http://localhost:8000/orders');
-          setOrders(res.data);
-      } catch (err) {
-          console.error("Failed to fetch orders", err);
-      } finally {
-          setLoading(false);
-      }
-  };
+    const fetchOrders = async () => {
+        try {
+            const res = await axios.get('http://localhost:8000/orders');
+            setOrders(res.data);
+        } catch (err) {
+            console.error("Failed to fetch orders", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  useEffect(() => {
-      fetchOrders();
-  }, []);
+    useEffect(() => {
+        fetchOrders();
+    }, []);
 
-  const pendingCount = orders.filter(o => o.status === 'PENDING').length;
+    const pendingCount = orders.filter(o => o.status === 'PENDING').length;
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="portal-header">
+    return (
         <div>
-            <h1 className="portal-title">Order Management</h1>
-            <p className="portal-subtitle">Manage active shipments and book new logistics orders.</p>
-        </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
-            New Shipment
-        </button>
-      </div>
+            {/* Header */}
+            <div className="portal-header">
+                <div>
+                    <h1 className="portal-title">Order Management</h1>
+                    <p className="portal-subtitle">Manage active shipments and book new logistics orders.</p>
+                </div>
+                <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                    New Shipment
+                </button>
+            </div>
 
-      {/* Stats Row */}
-      <div className="stats-row">
-        <div className="card stat-card-flex">
-            <div>
-                <p className="stat-label">Total Orders</p>
-                <div className="stat-number-wrapper">
-                    <h2 className="stat-number">{orders.length}</h2>
+            {/* Stats Row */}
+            <div className="stats-row">
+                <div className="card stat-card-flex">
+                    <div>
+                        <p className="stat-label">Total Orders</p>
+                        <div className="stat-number-wrapper">
+                            <h2 className="stat-number">{orders.length}</h2>
+                        </div>
+                    </div>
+                    <div className="stat-icon stat-icon-blue">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                    </div>
+                </div>
+
+                <div className="card stat-card-flex">
+                    <div>
+                        <p className="stat-label">Pending Assignment</p>
+                        <div className="stat-number-wrapper">
+                            <h2 className="stat-number">{pendingCount}</h2>
+                            <span className="stat-number-suffix">Orders</span>
+                        </div>
+                    </div>
+                    <div className="stat-icon stat-icon-amber">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </div>
                 </div>
             </div>
-            <div className="stat-icon stat-icon-blue">
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-            </div>
-        </div>
-        
-        <div className="card stat-card-flex">
-            <div>
-                <p className="stat-label">Pending Assignment</p>
-                <div className="stat-number-wrapper">
-                     <h2 className="stat-number">{pendingCount}</h2>
-                     <span className="stat-number-suffix">Orders</span>
-                </div>
-            </div>
-            <div className="stat-icon stat-icon-amber">
-                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-            </div>
-        </div>
-      </div>
 
-      {/* Shipment List */}
-      <h3 className="shipments-title">My Shipments</h3>
-      <ShipmentTable orders={orders} />
-      
-      {/* New Shipment Modal */}
-      {isModalOpen && (
-          <NewShipmentModal 
-            onClose={() => setIsModalOpen(false)} 
-            onSuccess={() => {
-                setIsModalOpen(false);
-                fetchOrders();
-            }}
-          />
-      )}
-    </div>
-  );
+            {/* Shipment List */}
+            <h3 className="shipments-title">My Shipments</h3>
+            <ShipmentTable orders={orders} />
+
+            {/* New Shipment Modal */}
+            {isModalOpen && (
+                <NewShipmentModal
+                    onClose={() => setIsModalOpen(false)}
+                    onSuccess={() => {
+                        setIsModalOpen(false);
+                        fetchOrders();
+                    }}
+                />
+            )}
+        </div>
+    );
 }
 
 function ShipmentTable({ orders }) {
@@ -110,54 +111,17 @@ function ShipmentTable({ orders }) {
                             <td className="shipment-id-td">#{o.id}</td>
                             <td className="shipment-td-bold">{o.item_name || 'General Cargo'}</td>
                             <td className="shipment-td-muted">{o.length_cm}x{o.width_cm}x{o.height_cm} cm • {o.weight_kg} kg</td>
-                            <td className="shipment-td-muted">{o.volume_m3.toFixed(4)} m³</td>
+                            <td className="shipment-td-muted">
+                                {o.volume_m3 < 0.0001 && o.volume_m3 > 0
+                                    ? o.volume_m3.toFixed(6)
+                                    : o.volume_m3.toFixed(4)} m³
+                            </td>
                             <td className="shipment-td">
-                                <span className={`badge ${
-                                    o.status === 'SHIPPED' ? 'badge-success' : 
-                                    o.status === 'ASSIGNED' ? 'badge-success' : 
-                                    o.status === 'CANCELLED' ? 'badge-muted' : 'badge-neutral'
-                                }`}>
+                                <span className={`badge ${o.status === 'SHIPPED' ? 'badge-success' :
+                                    o.status === 'ASSIGNED' ? 'badge-warning' : 'badge-neutral'
+                                    }`}>
                                     {o.status}
                                 </span>
-                                {o.status === 'PENDING' && (
-                                    <button 
-                                        style={{ 
-                                            marginLeft: '1rem', 
-                                            padding: '0.25rem 0.5rem',
-                                            fontSize: '0.7rem', 
-                                            cursor: 'pointer', 
-                                            border: '1px solid var(--error)', 
-                                            background: '#fff0f0', 
-                                            color: 'var(--error)',
-                                            borderRadius: '4px',
-                                            fontWeight: '600'
-                                        }}
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            if (!confirm("Cancel this order?")) return;
-                                            try {
-                                                await axios.post(`http://localhost:8000/orders/${o.id}/cancel`);
-                                                // Assuming parent refreshes via prop or context? 
-                                                // Wait, MSMEPortal passes orders list, but ShipmentTable doesn't have refresh callback.
-                                                // I need to add onUpdate prop to ShipmentTable request header? 
-                                                // Or simpler: force reload or lift state. 
-                                                // I'll reload window for quick fix or pass callback. 
-                                                // Let's pass callback. Wait, I can't easily change prop signature in this single replace call if I don't see parent.
-                                                // I see parent in previous `view_file`. MSMEPortal passes `orders={orders}`.
-                                                // I'll assume window.location.reload() for now or assume simple callback later.
-                                                // Actually, let's use window.location.reload() as fallback or try to call a prop that might not exist? No.
-                                                // I will just alert for now? No user wants functionality.
-                                                // I will verify if I can change parent in next step.
-                                                // Actually I see `ShipmentTable({ orders })` signature in line 90.
-                                                window.location.reload(); 
-                                            } catch (err) {
-                                                alert("Failed to cancel");
-                                            }
-                                        }}
-                                    >
-                                        Cancel
-                                    </button>
-                                )}
                             </td>
                         </tr>
                     ))}
@@ -168,23 +132,41 @@ function ShipmentTable({ orders }) {
 }
 
 function NewShipmentModal({ onClose, onSuccess }) {
+    const { showAlert } = useModal();
     const [pickupLocation, setPickupLocation] = useState(null);
     const [itemName, setItemName] = useState('');
     const [weight, setWeight] = useState('');
     const [dims, setDims] = useState({ l: '', w: '', h: '' });
     const [loading, setLoading] = useState(false);
-    
-    const calcVolume = (dims.l && dims.w && dims.h) 
-        ? ((dims.l * dims.w * dims.h) / 1000000)
-        : 0;
 
-    const volumeDisplay = calcVolume === 0 ? '0.00' :
-                         calcVolume < 0.001 ? calcVolume.toFixed(6) :
-                         calcVolume.toFixed(4);
+    const [volumeUnit, setVolumeUnit] = useState('m3'); // m3, cm3, ft3
+    const [showUnitMenu, setShowUnitMenu] = useState(false);
+
+    const getVolumeDisplay = () => {
+        if (!dims.l || !dims.w || !dims.h) return '0.00';
+        const v_cm3 = dims.l * dims.w * dims.h;
+
+        if (volumeUnit === 'm3') {
+             const v_m3 = v_cm3 / 1000000;
+             return v_m3 < 0.0001 && v_m3 > 0 ? v_m3.toFixed(6) : v_m3.toFixed(4);
+        }
+        if (volumeUnit === 'cm3') return v_cm3.toFixed(2);
+        if (volumeUnit === 'ft3') return (v_cm3 / 28316.85).toFixed(4);
+        return '0.00';
+    };
 
     const handleCreate = async () => {
+        // Validation: At least one letter, only letters/numbers/spaces
+        const nameRegex = /^[a-zA-Z0-9\s]+$/;
+        const hasLetter = /[a-zA-Z]/;
+
         if (!itemName || !weight || !dims.l || !dims.w || !dims.h || !pickupLocation) {
-            alert("Please fill all fields and select a location.");
+            showAlert("Missing Information", "Please fill all fields and select a location.");
+            return;
+        }
+
+        if (!nameRegex.test(itemName) || !hasLetter.test(itemName)) {
+            showAlert("Invalid Item Name", "Item Name must contain letters and numbers only (no special characters), and must include at least one letter.");
             return;
         }
 
@@ -202,7 +184,7 @@ function NewShipmentModal({ onClose, onSuccess }) {
             onSuccess();
         } catch (err) {
             console.error(err);
-            alert("Failed to create order");
+            showAlert("Error", "Failed to create order");
         } finally {
             setLoading(false);
         }
@@ -218,124 +200,175 @@ function NewShipmentModal({ onClose, onSuccess }) {
                     </button>
                 </div>
 
-                <form className="space-y-6" style={{ flex: 1 }} onSubmit={e => e.preventDefault()}>
-                    <div className="form-group">
-                        <label className="form-label">Item Name / Description</label>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                            </div>
-                            <input 
-                                className="form-input" 
-                                placeholder="e.g. Electronic Components" 
-                                style={{ paddingLeft: '36px' }} 
-                                value={itemName}
-                                onChange={e => setItemName(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Dimensions (cm)</label>
-                        <div className="dimensions-grid">
-                            <div>
-                                <input 
-                                    type="number" 
-                                    className="form-input" 
-                                    placeholder="L" 
-                                    style={{ textAlign: 'center' }} 
-                                    value={dims.l}
-                                    onChange={e => setDims({...dims, l: e.target.value})}
-                                />
-                                <span className="dim-label">Length</span>
-                            </div>
-                            <div>
-                                <input 
-                                    type="number" 
-                                    className="form-input" 
-                                    placeholder="W" 
-                                    style={{ textAlign: 'center' }} 
-                                    value={dims.w}
-                                    onChange={e => setDims({...dims, w: e.target.value})}
-                                />
-                                <span className="dim-label">Width</span>
-                            </div>
-                             <div>
-                                <input 
-                                    type="number" 
-                                    className="form-input" 
-                                    placeholder="H" 
-                                    style={{ textAlign: 'center' }} 
-                                    value={dims.h}
-                                    onChange={e => setDims({...dims, h: e.target.value})}
-                                />
-                                <span className="dim-label">Height</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Calculated Volume Highlight */}
-                    <div className="volume-highlight">
-                        <div className="volume-icon">
-                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                        </div>
-                        <div>
-                            <div className="volume-text-label">Calculated Volume</div>
-                            <div className="volume-value">
-                                {volumeDisplay} m³
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Total Weight (kg)</label>
-                        <div style={{ position: 'relative' }}>
-                             <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-                                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3 3l18 18"></path></svg>
-                            </div>
-                            <input 
-                                type="number" 
-                                className="form-input" 
-                                placeholder="0.0" 
-                                style={{ paddingLeft: '36px' }}
-                                value={weight}
-                                onChange={e => setWeight(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Pickup Location</label>
-                        <div className="location-picker-wrapper">
-                             <LocationPickerMap onLocationSelect={setPickupLocation} />
-                             
-                             {/* Overlay hint if not selected */}
-                             {!pickupLocation && (
-                                <div className="location-hint-overlay">
-                                    📍 Click map to select
-                                </div>
-                             )}
-                        </div>
+                <div className="new-shipment-grid">
+                    {/* Left Panel: Map & Discovery */}
+                    <div className="left-panel">
+                        <label className="form-label" style={{ marginBottom: '0.5rem' }}>Pickup Location & Discovery</label>
+                        <LocationPickerMap
+                            onLocationSelect={setPickupLocation}
+                            style={{ flex: 1, minHeight: '400px' }}
+                        />
                         {pickupLocation && (
-                            <div className="location-selected-text">
+                            <div className="location-selected-text" style={{ marginTop: '1rem' }}>
                                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                                 Location Selected: {pickupLocation.lat.toFixed(4)}, {pickupLocation.lng.toFixed(4)}
                             </div>
                         )}
+                        {!pickupLocation && (
+                            <div className="location-selected-text" style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>
+                                No location selected. Search or click map.
+                            </div>
+                        )}
                     </div>
-                </form>
 
-                <div className="drawer-actions">
-                    <button type="button" onClick={onClose} className="btn" style={{ flex: 1, border: '1px solid var(--border)' }}>Cancel</button>
-                    <button 
-                        type="button" 
-                        onClick={handleCreate} 
-                        disabled={loading}
-                        className="btn btn-primary" 
-                        style={{ flex: 2 }}
-                    >
-                        {loading ? 'Creating...' : 'Confirm Booking'}
-                    </button>
+                    {/* Right Panel: Shipment Details */}
+                    <form className="right-panel" onSubmit={e => e.preventDefault()}>
+
+                        <div className="form-group">
+                            <label className="form-label">Item Name / Description</label>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                                </div>
+                                <input
+                                    className="form-input"
+                                    placeholder="e.g. Electronic Components"
+                                    style={{ paddingLeft: '36px' }}
+                                    value={itemName}
+                                    onChange={e => setItemName(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Dimensions (cm)</label>
+                            <div className="dimensions-grid">
+                                <div>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        placeholder="L"
+                                        style={{ textAlign: 'center' }}
+                                        value={dims.l}
+                                        onChange={e => setDims({ ...dims, l: e.target.value })}
+                                    />
+                                    <span className="dim-label">Length</span>
+                                </div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        placeholder="W"
+                                        style={{ textAlign: 'center' }}
+                                        value={dims.w}
+                                        onChange={e => setDims({ ...dims, w: e.target.value })}
+                                    />
+                                    <span className="dim-label">Width</span>
+                                </div>
+                                <div>
+                                    <input
+                                        type="number"
+                                        className="form-input"
+                                        placeholder="H"
+                                        style={{ textAlign: 'center' }}
+                                        value={dims.h}
+                                        onChange={e => setDims({ ...dims, h: e.target.value })}
+                                    />
+                                    <span className="dim-label">Height</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Calculated Volume Highlight */}
+                        <div className="volume-highlight">
+                            <div className="volume-icon">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <div className="volume-text-label">Calculated Volume</div>
+                                <div className="volume-value">
+                                    {getVolumeDisplay()}
+                                    <span style={{ fontSize: '0.8em', marginLeft: '4px', opacity: 0.7 }}>
+                                        {volumeUnit === 'm3' ? 'm³' : volumeUnit === 'cm3' ? 'cm³' : 'ft³'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowUnitMenu(!showUnitMenu)}
+                                    className="btn"
+                                    style={{ padding: '4px 8px', fontSize: '0.8rem', background: 'var(--bg)', border: '1px solid var(--border)' }}
+                                >
+                                    Change Unit ▼
+                                </button>
+                                {showUnitMenu && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        right: 0,
+                                        background: 'white',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '0.375rem',
+                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                        zIndex: 10,
+                                        marginTop: '4px',
+                                        minWidth: '80px',
+                                        color: 'var(--text-main)'
+                                    }}>
+                                        {['m3', 'cm3', 'ft3'].map(unit => (
+                                            <div
+                                                key={unit}
+                                                onClick={() => { setVolumeUnit(unit); setShowUnitMenu(false); }}
+                                                style={{
+                                                    padding: '8px 12px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.875rem',
+                                                    background: volumeUnit === unit ? '#f1f5f9' : 'transparent',
+                                                    borderBottom: '1px solid #f1f5f9'
+                                                }}
+                                            >
+                                                {unit === 'm3' ? 'm³' : unit === 'cm3' ? 'cm³' : 'ft³'}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Total Weight (kg)</label>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><path d="M3 3l18 18"></path></svg>
+                                </div>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    placeholder="0.0"
+                                    style={{ paddingLeft: '36px' }}
+                                    value={weight}
+                                    onChange={e => setWeight(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Spacer to push buttons down if needed */}
+                        <div style={{ flex: 1 }}></div>
+
+                        <div className="drawer-actions" style={{ marginTop: 'auto' }}>
+                            <button type="button" onClick={onClose} className="btn" style={{ flex: 1, border: '1px solid var(--border)' }}>Cancel</button>
+                            <button
+                                type="button"
+                                onClick={handleCreate}
+                                disabled={loading}
+                                className="btn btn-primary"
+                                style={{ flex: 2 }}
+                            >
+                                {loading ? 'Creating...' : 'Confirm Booking'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

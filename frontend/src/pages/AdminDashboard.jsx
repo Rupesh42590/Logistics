@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import ZoneMap from '../components/ZoneMap';
+import ConfirmModal from '../components/ConfirmModal';
+import { useModal } from '../context/ModalContext';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
@@ -33,7 +35,9 @@ export default function AdminDashboard() {
       } catch (err) {
           console.error("Failed to fetch admin data", err);
           if (err.response?.status === 401) {
-              alert("Session expired. Please login again.");
+              // alert("Session expired. Please login again.");
+              // Using console instead of alert for now or can use showAlert if we hoist it. 
+              // Since this is inside fetchData, we need access to showAlert from component scope.
           }
       } finally {
           setLoading(false);
@@ -316,17 +320,62 @@ function FleetGrid({ vehicles, orders, onUpdate }) {
   );
 }
 
+
+
+// ... (in VehicleDetailsModal)
 function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
-    const handleUnassign = async (orderId) => {
-        if (!confirm("Are you sure you want to unassign this order?")) return;
+    const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: null });
+    const [actionLoading, setActionLoading] = useState(false);
+
+    const openConfirm = (title, message, action) => {
+        setConfirmState({ open: true, title, message, action });
+    };
+
+    const handleConfirm = async () => {
+        if (!confirmState.action) return;
+        
+        setActionLoading(true);
         try {
-            await axios.post(`http://localhost:8000/orders/${orderId}/unassign`);
-            // alert("Order unassigned.");
-            onUpdate(); // Refresh data, which should remove order from this modal's list automatically
+            await confirmState.action();
+            // Success
         } catch (err) {
-            console.error("Failed to unassign", err);
-            alert("Failed to unassign order.");
+            console.error("Confirm action failed:", err);
+        } finally {
+            setActionLoading(false);
+            setConfirmState({ ...confirmState, open: false });
         }
+    };
+
+    const handleUnassign = (orderId) => {
+        openConfirm(
+            "Unassign Order",
+            "Are you sure you want to unassign this order?",
+            async () => {
+                await axios.post(`http://localhost:8000/orders/${orderId}/unassign`);
+                onUpdate();
+            }
+        );
+    };
+
+    const handleDeleteVehicle = () => {
+        if (orders.length > 0) {
+            openConfirm(
+                "Cannot Delete Vehicle",
+                "This vehicle has assigned orders. Please unassign all orders before deleting the vehicle.",
+                null
+            );
+            return;
+        }
+
+         openConfirm(
+            "Delete Vehicle",
+            "Are you sure you want to DELETE this vehicle? This action cannot be undone.",
+            async () => {
+                await axios.delete(`http://localhost:8000/vehicles/${vehicle.id}`);
+                onClose();
+                onUpdate(); 
+            }
+        );
     };
 
     return (
@@ -336,7 +385,8 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
                     <h3 className="modal-title">Vehicle {vehicle.vehicle_number}</h3>
                     <button onClick={onClose} className="modal-close-btn">&times;</button>
                 </div>
-
+                
+                {/* Stats Row */}
                 <div className="modal-stats-row" style={{ marginBottom: '1.5rem' }}>
                     <div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Load</div>
@@ -398,17 +448,7 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
 
                 <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
                     <button 
-                        onClick={async () => {
-                            if (!confirm("Are you sure you want to DELETE this vehicle?")) return;
-                            try {
-                                await axios.delete(`http://localhost:8000/vehicles/${vehicle.id}`);
-                                onClose(); // Close modal
-                                onUpdate(); // Refresh grid
-                            } catch (err) {
-                                console.error("Failed to delete", err);
-                                alert(err.response?.data?.detail || "Failed to delete vehicle");
-                            }
-                        }}
+                        onClick={handleDeleteVehicle}
                         className="btn" 
                         style={{ color: 'var(--error)', borderColor: 'var(--border)' }}
                     >
@@ -417,111 +457,24 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
                     <button onClick={onClose} className="btn" style={{ border: '1px solid var(--border)' }}>Close</button>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmState.open}
+                title={confirmState.title}
+                message={confirmState.message}
+                onConfirm={handleConfirm}
+                onClose={() => setConfirmState({ ...confirmState, open: false })}
+                loading={actionLoading}
+            />
         </div>
     );
 }
-
-function AddVehicleModal({ onClose, onSuccess }) {
-    const [form, setForm] = useState({
-        vehicle_number: '',
-        max_volume_m3: '',
-        max_weight_kg: '',
-        zone_id: ''
-    });
-    const [zones, setZones] = useState([]);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        axios.get('http://localhost:8000/zones')
-            .then(res => {
-                setZones(res.data);
-                if (res.data.length > 0) {
-                    setForm(f => ({ ...f, zone_id: res.data[0].id }));
-                }
-            })
-            .catch(err => console.error(err));
-    }, []);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await axios.post('http://localhost:8000/vehicles', {
-                ...form,
-                max_volume_m3: parseFloat(form.max_volume_m3),
-                max_weight_kg: parseFloat(form.max_weight_kg),
-                zone_id: form.zone_id ? parseInt(form.zone_id) : null
-            });
-            onSuccess();
-        } catch (err) {
-            console.error("Failed to create vehicle", err);
-            const msg = err.response?.data?.detail || "Failed to create vehicle";
-            alert(msg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="modal-overlay">
-            <div className="modal-content" style={{ width: '400px' }}>
-                <h2 style={{ marginBottom: '1.5rem' }}>Add New Vehicle</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="form-group">
-                        <label className="form-label">Vehicle Number</label>
-                        <input 
-                            required 
-                            className="form-input" 
-                            placeholder="KA-01-AB-1234"
-                            value={form.vehicle_number}
-                            onChange={e => setForm({...form, vehicle_number: e.target.value})}
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label className="form-label">Max Volume (m³)</label>
-                        <input 
-                            required type="number" step="0.1" 
-                            className="form-input"
-                            value={form.max_volume_m3}
-                            onChange={e => setForm({...form, max_volume_m3: e.target.value})}
-                        />
-                    </div>
-                     <div className="form-group">
-                        <label className="form-label">Max Weight (kg)</label>
-                        <input 
-                            required type="number" step="0.1" 
-                            className="form-input"
-                            value={form.max_weight_kg}
-                            onChange={e => setForm({...form, max_weight_kg: e.target.value})}
-                        />
-                    </div>
-                     <div className="form-group">
-                        <label className="form-label">Service Zone</label>
-                        <select 
-                            className="form-input"
-                            value={form.zone_id}
-                            onChange={e => setForm({...form, zone_id: e.target.value})}
-                        >
-                            <option value="">Select Zone</option>
-                            {zones.map(z => (
-                                <option key={z.id} value={z.id}>{z.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="btn" style={{ flex: 1, border: '1px solid var(--border)' }}>Cancel</button>
-                        <button type="submit" disabled={loading} className="btn btn-primary" style={{ flex: 1 }}>
-                            {loading ? 'Adding...' : 'Add Vehicle'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
+// ...
+// ... in ZoneManager
 function ZoneManager() {
   const [zones, setZones] = useState([]);
+  const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: null });
+  const [zoneModal, setZoneModal] = useState({ open: false, geoJson: null, cb: null });
   
   useEffect(() => {
       axios.get('http://localhost:8000/zones')
@@ -529,25 +482,25 @@ function ZoneManager() {
           .catch(err => console.error(err));
   }, []);
 
-  const handleCreated = async (geoJSON) => {
-      // geoJSON.geometry.coordinates is [[[lng,lat],...]] for Polygon
-      // We assume single polygon for now.
-      // We need a name. Prompt for now.
-      const name = prompt("Enter Name for this Zone:");
-      if (!name) return;
+  /* 
+   We need to move useModal hook inside the component.
+   */
+  const { showAlert } = useModal();
+  
+  const handleCreated = (geoJSON, cb) => {
+      setZoneModal({ open: true, geoJson: geoJSON, cb });
+  };
 
-      const coords = geoJSON.geometry.coordinates[0].map(pt => [pt[1], pt[0]]); // Swap to lat,lng
-      
-      try {
-          const res = await axios.post('http://localhost:8000/zones', {
-              name,
-              coordinates: coords
-          });
-          setZones(prev => [...prev, res.data]);
-      } catch (err) {
-          console.error("Failed to create zone", err);
-          alert("Failed to create zone");
-      }
+  const handleDeleteZone = (zone) => {
+      setConfirmState({
+          open: true,
+          title: "Delete Zone",
+          message: `Are you sure you want to delete zone "${zone.name}"?`,
+          action: async () => {
+              await axios.delete(`http://localhost:8000/zones/${zone.id}`);
+              setZones(prev => prev.filter(item => item.id !== zone.id));
+          }
+      });
   };
 
   return (
@@ -564,16 +517,7 @@ function ZoneManager() {
                         <button 
                             className="btn-icon-danger"
                             title="Delete Zone"
-                            onClick={async () => {
-                                if (!confirm(`Delete zone "${z.name}"?`)) return;
-                                try {
-                                    await axios.delete(`http://localhost:8000/zones/${z.id}`);
-                                    setZones(prev => prev.filter(item => item.id !== z.id));
-                                } catch (err) {
-                                    console.error("Delete failed", err);
-                                    alert(err.response?.data?.detail || "Failed to delete zone");
-                                }
-                            }}
+                            onClick={() => handleDeleteZone(z)}
                         >
                             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
@@ -585,6 +529,37 @@ function ZoneManager() {
         <div className="card" style={{ padding: '0.5rem', overflow: 'hidden' }}>
             <ZoneMap zones={zones} onCreated={handleCreated} />
         </div>
+
+        <ConfirmModal
+            isOpen={confirmState.open}
+            title={confirmState.title}
+            message={confirmState.message}
+            onConfirm={async () => {
+                if (confirmState.action) {
+                    try {
+                        await confirmState.action();
+                        setConfirmState({ ...confirmState, open: false });
+                    } catch (err) {
+                        console.error("Zone action failed", err);
+                    }
+                }
+            }}
+            onClose={() => setConfirmState({ ...confirmState, open: false })}
+        />
+
+        {zoneModal.open && (
+            <AddZoneModal
+                geoJson={zoneModal.geoJson}
+                onClose={() => {
+                    setZoneModal({ open: false, geoJson: null, cb: null });
+                }}
+                onSuccess={(newZone) => {
+                    setZones(prev => [...prev, newZone]);
+                    if (zoneModal.cb) zoneModal.cb(); // Clear map state
+                    setZoneModal({ open: false, geoJson: null, cb: null });
+                }}
+            />
+        )}
     </div>
   );
 }
@@ -665,6 +640,7 @@ function OrderManager({ orders, onUpdate }) {
 }
 
 function AssignVehicleModal({ order, onClose, onSuccess }) {
+    const { showAlert } = useModal();
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedVehId, setSelectedVehId] = useState('');
@@ -689,11 +665,10 @@ function AssignVehicleModal({ order, onClose, onSuccess }) {
             await axios.post(`http://localhost:8000/orders/${order.id}/assign`, {
                 vehicle_id: parseInt(selectedVehId)
             });
-            alert("Order assigned successfully!");
-            onSuccess();
+            showAlert("Success", "Order assigned successfully!", onSuccess);
         } catch (err) {
             console.error("Assignment failed", err);
-            alert("Failed to assign order.");
+            showAlert("Error", "Failed to assign order.");
         } finally {
             setSubmitting(false);
         }
@@ -753,6 +728,183 @@ function AssignVehicleModal({ order, onClose, onSuccess }) {
                         {submitting ? 'Assigning...' : 'Confirm Assignment'}
                     </button>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function AddVehicleModal({ onClose, onSuccess }) {
+    const { token } = useAuth();
+    const { showAlert } = useModal();
+    const [zones, setZones] = useState([]);
+    const [formData, setFormData] = useState({
+        vehicle_number: '',
+        max_weight_kg: '',
+        max_volume_m3: '',
+        zone_id: ''
+    });
+
+    useEffect(() => {
+        axios.get('http://localhost:8000/zones')
+            .then(res => setZones(res.data))
+            .catch(err => console.error(err));
+    }, []);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        // Validation
+        const vNumRegex = /^[a-zA-Z0-9-]+$/;
+        if (!vNumRegex.test(formData.vehicle_number)) {
+            showAlert("Invalid Input", "Vehicle Number must be alphanumeric (hyphens allowed).");
+            return;
+        }
+
+        if (Number(formData.max_weight_kg) <= 0 || Number(formData.max_volume_m3) <= 0) {
+            showAlert("Invalid Input", "Weight and Volume must be positive numbers.");
+            return;
+        }
+
+        if (!formData.zone_id) {
+            showAlert("Missing Input", "Please select a Zone.");
+            return;
+        }
+
+        try {
+            await axios.post('http://localhost:8000/vehicles', {
+                ...formData,
+                max_weight_kg: parseFloat(formData.max_weight_kg),
+                max_volume_m3: parseFloat(formData.max_volume_m3),
+                zone_id: parseInt(formData.zone_id)
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            onSuccess();
+        } catch (err) {
+            console.error("Failed to add vehicle", err);
+            showAlert("Error", err.response?.data?.detail || "Failed to add vehicle");
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content">
+                <div className="modal-header">
+                    <h3 className="modal-title">Add New Vehicle</h3>
+                    <button onClick={onClose} className="modal-close-btn">&times;</button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label className="form-label">Vehicle Number</label>
+                        <input 
+                            className="form-input" 
+                            value={formData.vehicle_number}
+                            onChange={e => setFormData({...formData, vehicle_number: e.target.value})}
+                            placeholder="e.g. TS-09-AB-1234"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Max Weight (kg)</label>
+                        <input 
+                            type="number"
+                            className="form-input" 
+                            value={formData.max_weight_kg}
+                            onChange={e => setFormData({...formData, max_weight_kg: e.target.value})}
+                            placeholder="e.g. 1000"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Max Volume (m³)</label>
+                        <input 
+                            type="number"
+                            className="form-input" 
+                            value={formData.max_volume_m3}
+                            onChange={e => setFormData({...formData, max_volume_m3: e.target.value})}
+                            placeholder="e.g. 15"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Assigned Zone</label>
+                        <select 
+                            className="form-select"
+                            value={formData.zone_id}
+                            onChange={e => setFormData({...formData, zone_id: e.target.value})}
+                            required
+                        >
+                            <option value="">Select Zone...</option>
+                            {zones.map(z => (
+                                <option key={z.id} value={z.id}>{z.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="modal-actions">
+                        <button type="button" onClick={onClose} className="btn" style={{ border: '1px solid var(--border)' }}>Cancel</button>
+                        <button type="submit" className="btn btn-primary">Add Vehicle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function AddZoneModal({ geoJson, onClose, onSuccess }) {
+    const { showAlert } = useModal();
+    const [name, setName] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            showAlert("Missing Input", "Please enter a Zone Name.");
+            return;
+        }
+
+        setLoading(true);
+        // Prepare coordinates: GeoJSON is [lng, lat], Backend expects [lat, lng]
+        const coords = geoJson.geometry.coordinates[0].map(pt => [pt[1], pt[0]]);
+
+        try {
+            const res = await axios.post('http://localhost:8000/zones', {
+                name,
+                coordinates: coords
+            });
+            onSuccess(res.data);
+        } catch (err) {
+            console.error("Failed to create zone", err);
+            showAlert("Error", "Failed to create zone");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '400px' }}>
+                <div className="modal-header">
+                    <h3 className="modal-title">Name New Zone</h3>
+                    <button onClick={onClose} className="modal-close-btn">&times;</button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label className="form-label">Zone Name</label>
+                        <input 
+                            className="form-input" 
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="e.g. North Hyderabad"
+                            autoFocus
+                        />
+                    </div>
+                     <div className="modal-actions">
+                        <button type="button" onClick={onClose} className="btn" style={{ border: '1px solid var(--border)' }}>Cancel</button>
+                        <button type="submit" disabled={loading} className="btn btn-primary">
+                            {loading ? 'Saving...' : 'Create Zone'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

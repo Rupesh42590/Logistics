@@ -7,6 +7,7 @@ export default function AppLayout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
 
   const handleLogout = () => {
     logout();
@@ -32,8 +33,23 @@ export default function AppLayout({ children }) {
   
   return (
     <div className="app-layout">
+      {/* Mobile Overlay */}
+      <div 
+        className={`sidebar-overlay ${isSidebarOpen ? 'visible' : ''}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
+      {/* Mobile Toggle Trigger */}
+      <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+        {isSidebarOpen ? (
+             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        ) : (
+             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        )}
+      </button>
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         {/* Logo */}
         <div className="sidebar-logo-container">
           <div className="sidebar-logo">
@@ -68,10 +84,10 @@ export default function AppLayout({ children }) {
                 {/* Mock Links for visuals */}
                 {/* Shipments link removed as per request */}
                  <li>
-                     <a href="#" className="nav-link nav-link-muted">
+                     <Link to={user?.role === 'SUPER_ADMIN' ? '/admin/settings' : '/msme/settings'} className={`nav-link nav-link-muted ${isActive(user?.role === 'SUPER_ADMIN' ? '/admin/settings' : '/msme/settings') ? 'active' : ''}`}>
                         <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         Settings
-                     </a>
+                     </Link>
                 </li>
             </ul>
         </nav>
