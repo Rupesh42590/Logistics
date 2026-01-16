@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
+const API_URL = 'http://localhost:8000';
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -15,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        axios.get('http://localhost:8000/users/me')
+        axios.get(`${API_URL}/users/me`)
             .then(res => {
                 setUser(res.data);
                 localStorage.setItem('role', res.data.role);
@@ -38,26 +39,44 @@ export const AuthProvider = ({ children }) => {
         params.append('username', email);
         params.append('password', password);
         
-        const res = await axios.post('http://localhost:8000/token', params);
+        const res = await axios.post(`${API_URL}/token`, params);
         const { access_token } = res.data;
         
         localStorage.setItem('token', access_token);
-        // We need to decode token or fetch user to get role. 
-        // For simplicity, let's assume we decode or backend returns it.
-        // But backend only returns token. Let's fetch /users/me
         setToken(access_token);
         
-        // Fetch user role immediately
-        const userRes = await axios.get('http://localhost:8000/users/me', {
+        const userRes = await axios.get(`${API_URL}/users/me`, {
             headers: { 'Authorization': `Bearer ${access_token}` }
         });
         
         const userData = userRes.data;
         localStorage.setItem('role', userData.role);
         setUser(userData);
-        return userData.role; // Return role for redirect logic
+        return userData.role;
     } catch (err) {
         console.error("Login failed", err);
+        throw err;
+    }
+  };
+
+  const driverLogin = async (accessKey) => {
+    try {
+        const res = await axios.post(`${API_URL}/driver/login`, { access_key: accessKey });
+        const { access_token } = res.data;
+        
+        localStorage.setItem('token', access_token);
+        setToken(access_token);
+        
+        const userRes = await axios.get(`${API_URL}/users/me`, {
+            headers: { 'Authorization': `Bearer ${access_token}` }
+        });
+        
+        const userData = userRes.data;
+        localStorage.setItem('role', userData.role);
+        setUser(userData);
+        return userData.role;
+    } catch (err) {
+        console.error("Driver login failed", err);
         throw err;
     }
   };
@@ -76,7 +95,7 @@ export const AuthProvider = ({ children }) => {
                 address: companyData.address
             }
         };
-        await axios.post('http://localhost:8000/signup/msme', payload);
+        await axios.post(`${API_URL}/signup/msme`, payload);
         return true;
     } catch (err) {
         console.error("Signup failed", err);
@@ -91,7 +110,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, signupMSME, logout }}>
+    <AuthContext.Provider value={{ user, token, login, driverLogin, signupMSME, logout }}>
       {children}
     </AuthContext.Provider>
   );

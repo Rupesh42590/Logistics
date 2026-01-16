@@ -976,55 +976,141 @@ function AddZoneModal({ geoJson, onClose, onSuccess }) {
 
 
 function DriverManager({ drivers, onUpdate }) {
-    // Simple list for now
+    const { showAlert } = useModal();
+    const [deletingDriver, setDeletingDriver] = useState(null);
+
+    const handleDelete = async () => {
+        try {
+            await axios.delete(`http://localhost:8000/drivers/${deletingDriver.id}`);
+            showAlert("Success", "Driver account deleted successfully.");
+            onUpdate();
+            setDeletingDriver(null);
+        } catch (err) {
+            console.error(err);
+            showAlert("Error", err.response?.data?.detail || "Failed to delete driver");
+        }
+    };
+
     return (
         <div className="card table-wrapper">
              <table className="data-table">
                 <thead className="table-head">
                     <tr>
                         <th className="table-th">Name</th>
-                        <th className="table-th">Email</th>
-                        <th className="table-th">Role</th>
+                        <th className="table-th">Vehicle</th>
+                        <th className="table-th">Access Key</th>
                         <th className="table-th">ID</th>
+                        <th className="table-th">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {drivers.map(d => (
                         <tr key={d.id} className="table-td">
                             <td style={{ padding: '1rem', fontWeight: '500' }}>{d.name || '-'}</td>
-                            <td style={{ padding: '1rem' }}>{d.email}</td>
-                            <td style={{ padding: '1rem' }}><span className="badge badge-success">{d.role}</span></td>
+                            <td style={{ padding: '1rem' }}>{d.vehicle_number || '-'}</td>
+                            <td style={{ padding: '1rem', fontFamily: 'monospace', fontSize: '0.75rem', maxWidth: '200px', wordBreak: 'break-all' }}>
+                                {d.access_key || '-'}
+                            </td>
                              <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>#{d.id}</td>
+                             <td style={{ padding: '1rem' }}>
+                                <button 
+                                    className="btn btn-secondary" 
+                                    style={{ color: '#ef4444', borderColor: 'transparent', padding: '0.25rem 0.5rem' }}
+                                    onClick={() => setDeletingDriver(d)}
+                                >
+                                    Delete
+                                </button>
+                             </td>
                         </tr>
                     ))}
                     {drivers.length === 0 && (
-                        <tr><td colSpan="4" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No drivers found. Add one.</td></tr>
+                        <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No drivers found. Add one.</td></tr>
                     )}
                 </tbody>
             </table>
+
+            {deletingDriver && (
+                <ConfirmModal 
+                    isOpen={!!deletingDriver}
+                    title="Delete Driver Account"
+                    message={`Are you sure you want to delete ${deletingDriver.name}? This will remove their secure access key and unassign them from any vehicles.`}
+                    onConfirm={handleDelete}
+                    onClose={() => setDeletingDriver(null)}
+                />
+            )}
         </div>
     );
 }
 
 function AddDriverModal({ onClose, onSuccess }) {
     const { showAlert } = useModal();
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [formData, setFormData] = useState({ name: '', vehicle_number: '' });
     const [loading, setLoading] = useState(false);
+    const [generatedKey, setGeneratedKey] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post('http://localhost:8000/drivers', formData);
-            showAlert("Success", "Driver created successfully!");
-            onSuccess();
+            const res = await axios.post('http://localhost:8000/drivers', formData);
+            setGeneratedKey(res.data.access_key);
         } catch (err) {
             console.error(err);
             showAlert("Error", err.response?.data?.detail || "Failed to create driver");
-        } finally {
             setLoading(false);
         }
     };
+
+    if (generatedKey) {
+        return (
+            <div className="modal-overlay">
+                <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+                    <div className="modal-header">
+                        <h3 className="modal-title">Driver Created!</h3>
+                    </div>
+                    <div style={{ padding: '1.5rem 0' }}>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                            Share this secure Access Key with the driver. They will need it to login.
+                        </p>
+                        <div style={{ 
+                            background: '#f1f5f9', 
+                            padding: '1rem', 
+                            borderRadius: '0.5rem', 
+                            fontFamily: 'monospace', 
+                            wordBreak: 'break-all',
+                            fontSize: '0.875rem',
+                            border: '1px solid var(--border)',
+                            marginBottom: '1rem'
+                        }}>
+                            {generatedKey}
+                        </div>
+                        <button 
+                            className="btn btn-secondary" 
+                            onClick={() => {
+                                navigator.clipboard.writeText(generatedKey);
+                                showAlert("Copied", "Key copied to clipboard");
+                            }}
+                            style={{ width: '100%', marginBottom: '0.5rem' }}
+                        >
+                            Copy to Clipboard
+                        </button>
+                    </div>
+                    <div className="modal-actions">
+                        <button 
+                            className="btn btn-primary" 
+                            style={{ width: '100%' }}
+                            onClick={() => {
+                                onSuccess();
+                                onClose();
+                            }}
+                        >
+                            Done
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="modal-overlay">
@@ -1035,20 +1121,19 @@ function AddDriverModal({ onClose, onSuccess }) {
                 </div>
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label className="form-label">Full Name</label>
+                        <label className="form-label">Driver Name</label>
                         <input className="form-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="John Doe" />
                     </div>
                     <div className="form-group">
-                        <label className="form-label">Email</label>
-                        <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required placeholder="driver@company.com" />
-                    </div>
-                    <div className="form-group">
-                        <label className="form-label">Password</label>
-                        <input type="password" className="form-input" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required placeholder="******" minLength={6} />
+                        <label className="form-label">Vehicle Number (Optional)</label>
+                        <input className="form-input" value={formData.vehicle_number} onChange={e => setFormData({...formData, vehicle_number: e.target.value})} placeholder="KA-01-HH-1234" />
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                            Enter the vehicle plate number assigned to this driver.
+                        </p>
                     </div>
                     <div className="modal-actions">
                         <button type="button" onClick={onClose} className="btn" style={{ border: '1px solid var(--border)' }}>Cancel</button>
-                        <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Creating...' : 'Create Driver'}</button>
+                        <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'Generating Key...' : 'Create Driver'}</button>
                     </div>
                 </form>
             </div>

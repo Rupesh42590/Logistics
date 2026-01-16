@@ -34,6 +34,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.MSME)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    access_key = Column(String, unique=True, index=True, nullable=True)
     
     company = relationship("Company", back_populates="users")
     orders = relationship("Order", back_populates="user")

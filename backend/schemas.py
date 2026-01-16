@@ -82,17 +82,15 @@ class VehicleResponse(VehicleBase):
 # Driver Schemas
 class DriverBase(BaseModel):
     name: str
-    email: EmailStr
-    password: str
 
 class DriverCreate(DriverBase):
-    pass
+    vehicle_number: Optional[str] = None
 
-class DriverResponse(BaseModel):
+class DriverResponse(DriverBase):
     id: int
-    name: str
-    email: EmailStr
+    access_key: Optional[str] = None
     role: UserRole = UserRole.DRIVER
+    vehicle_number: Optional[str] = None
     
     class Config:
         from_attributes = True

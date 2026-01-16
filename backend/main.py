@@ -1,4 +1,7 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+import secrets
+import uuid
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from contextlib import asynccontextmanager
@@ -25,7 +28,9 @@ app = FastAPI(lifespan=lifespan)
 # CORS Configuration
 origins = [
     "http://localhost:5173",
-    "http://localhost:5174", # In case port shifts
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
 ]
 
 app.add_middleware(
@@ -683,23 +688,102 @@ async def delete_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db), cu
 async def create_driver(driver: DriverCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role != models.UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="Only admins can create drivers")
-    # Check if email already exists
-    result = await db.execute(select(User).where(User.email == driver.email))
-    if result.scalars().first():
-        raise HTTPException(status_code=400, detail="Email already exists")
-    hashed_pwd = get_password_hash(driver.password)
-    new_user = User(name=driver.name, email=driver.email, hashed_password=hashed_pwd, role=models.UserRole.DRIVER)
+    
+    # Generate unique access key
+    access_key = secrets.token_hex(24) # 48 chars
+    
+    # Generate a dummy email for the User model (since it depends on unique email)
+    dummy_email = f"driver_{uuid.uuid4().hex}@logisoft.driver"
+    
+    # Use access_key as password (hashed) as well for legacy compatibility if needed
+    # but primarily we use access_key field.
+    hashed_pwd = get_password_hash(access_key)
+    
+    new_user = User(
+        name=driver.name, 
+        email=dummy_email, 
+        hashed_password=hashed_pwd, 
+        role=models.UserRole.DRIVER,
+        access_key=access_key
+    )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
-    return DriverResponse(id=new_user.id, name=new_user.name, email=new_user.email, role=new_user.role)
+    
+    # If vehicle_number provided, link it
+    vehicle_number = None
+    if driver.vehicle_number:
+        stmt = select(Vehicle).where(Vehicle.vehicle_number == driver.vehicle_number)
+        v_result = await db.execute(stmt)
+        vehicle = v_result.scalars().first()
+        if vehicle:
+            vehicle.driver_id = new_user.id
+            vehicle_number = vehicle.vehicle_number
+            await db.commit()
+
+    return DriverResponse(
+        id=new_user.id, 
+        name=new_user.name, 
+        access_key=new_user.access_key, 
+        role=new_user.role,
+        vehicle_number=vehicle_number
+    )
+
+@app.delete("/drivers/{driver_id}")
+async def delete_driver(driver_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != models.UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Only admins can delete drivers")
+    
+    # 1. Find the driver
+    result = await db.execute(select(User).where(User.id == driver_id, User.role == models.UserRole.DRIVER))
+    driver = result.scalars().first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    # 2. Unassign from vehicles
+    from sqlalchemy import update
+    await db.execute(update(Vehicle).where(Vehicle.driver_id == driver_id).values(driver_id=None))
+    
+    # 3. Delete the driver
+    await db.delete(driver)
+    await db.commit()
+    return {"message": "Driver deleted successfully"}
+
+class DriverLoginRequest(BaseModel):
+    access_key: str
+
+@app.post("/driver/login", response_model=Token)
+async def driver_login(req: DriverLoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.access_key == req.access_key))
+    user = result.scalars().first()
+    
+    if not user or user.role != models.UserRole.DRIVER:
+        raise HTTPException(status_code=401, detail="Invalid Access Key")
+    
+    access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/drivers", response_model=list[DriverResponse])
 async def read_drivers(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role != models.UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="Only admins can list drivers")
-    result = await db.execute(select(User).where(User.role == models.UserRole.DRIVER))
-    return result.scalars().all()
+    
+    from sqlalchemy.orm import selectinload
+    stmt = select(User).options(selectinload(User.vehicles)).where(User.role == models.UserRole.DRIVER)
+    result = await db.execute(stmt)
+    drivers = result.scalars().all()
+    
+    response = []
+    for d in drivers:
+        v_num = d.vehicles[0].vehicle_number if d.vehicles else None
+        response.append(DriverResponse(
+            id=d.id,
+            name=d.name,
+            access_key=d.access_key,
+            role=d.role,
+            vehicle_number=v_num
+        ))
+    return response
 
 @app.get("/driver/orders", response_model=list[OrderResponse])
 async def get_driver_orders(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

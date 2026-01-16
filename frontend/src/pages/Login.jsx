@@ -17,6 +17,8 @@ export default function Login() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loginMethod, setLoginMethod] = useState('standard'); // 'standard' or 'driver'
+  const [accessKey, setAccessKey] = useState('');
 
   // Signup State
   const [signupStep, setSignupStep] = useState(1);
@@ -48,7 +50,13 @@ export default function Login() {
     setLoginLoading(true);
 
     try {
-      const role = await login(loginEmail, loginPassword);
+      let role;
+      if (loginMethod === 'driver') {
+          role = await driverLogin(accessKey);
+      } else {
+          role = await login(loginEmail, loginPassword);
+      }
+
       if (role === 'SUPER_ADMIN') {
           navigate('/admin');
       } else if (role === 'DRIVER') {
@@ -57,18 +65,11 @@ export default function Login() {
           navigate('/msme');
       }
     } catch (err) {
-	    // Differentiate errors
         console.error(err);
         if (err.response) {
-            if (err.response.status === 401) {
-                setLoginError('Invalid email or password');
-            } else {
-                 setLoginError(`Login failed: ${err.response.data.detail || 'Server Error'}`);
-            }
-        } else if (err.request) {
-             setLoginError('Cannot connect to server. Ensure backend is running.');
+            setLoginError(err.response.data.detail || 'Login failed');
         } else {
-             setLoginError('An unexpected error occurred.');
+            setLoginError('Cannot connect to server');
         }
 	    setLoginLoading(false);
 	  }
@@ -134,48 +135,110 @@ export default function Login() {
                     </div>
                 )}
 
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div className="form-group">
-                        <label className="form-label">Email Address</label>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-                                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                            </div>
-                            <input 
-                                required 
-                                type="email" 
-                                className="form-input" 
-                                placeholder="Enter your email" 
-                                style={{ paddingLeft: '40px' }}
-                                value={loginEmail}
-                                onChange={(e) => setLoginEmail(e.target.value)}
-                            />
-                        </div>
-                    </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', background: '#f1f5f9', padding: '0.25rem', borderRadius: '0.5rem' }}>
+                    <button 
+                        onClick={() => setLoginMethod('standard')}
+                        style={{ 
+                            flex: 1, 
+                            padding: '0.5rem', 
+                            borderRadius: '0.375rem', 
+                            fontSize: '0.875rem', 
+                            fontWeight: '600',
+                            background: loginMethod === 'standard' ? 'white' : 'transparent',
+                            color: loginMethod === 'standard' ? 'var(--primary)' : 'var(--text-muted)',
+                            boxShadow: loginMethod === 'standard' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Standard Login
+                    </button>
+                    <button 
+                        onClick={() => setLoginMethod('driver')}
+                        style={{ 
+                            flex: 1, 
+                            padding: '0.5rem', 
+                            borderRadius: '0.375rem', 
+                            fontSize: '0.875rem', 
+                            fontWeight: '600',
+                            background: loginMethod === 'driver' ? 'white' : 'transparent',
+                            color: loginMethod === 'driver' ? 'var(--primary)' : 'var(--text-muted)',
+                            boxShadow: loginMethod === 'driver' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Secure Driver Access
+                    </button>
+                </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Password</label>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-                                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    {loginMethod === 'standard' ? (
+                        <>
+                            <div className="form-group">
+                                <label className="form-label">Email Address</label>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                                    </div>
+                                    <input 
+                                        required 
+                                        type="email" 
+                                        className="form-input" 
+                                        placeholder="Enter your email" 
+                                        style={{ paddingLeft: '40px' }}
+                                        value={loginEmail}
+                                        onChange={(e) => setLoginEmail(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                            <input 
-                                required 
-                                type="password" 
-                                className="form-input" 
-                                placeholder="••••••••" 
-                                style={{ paddingLeft: '40px' }}
-                                value={loginPassword}
-                                onChange={(e) => setLoginPassword(e.target.value)}
-                            />
+
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    </div>
+                                    <input 
+                                        required 
+                                        type="password" 
+                                        className="form-input" 
+                                        placeholder="••••••••" 
+                                        style={{ paddingLeft: '40px' }}
+                                        value={loginPassword}
+                                        onChange={(e) => setLoginPassword(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="form-group">
+                            <label className="form-label">Secure Access Key</label>
+                            <div style={{ position: 'relative' }}>
+                                <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </div>
+                                <input 
+                                    required 
+                                    type="password" 
+                                    className="form-input" 
+                                    placeholder="Enter your 48-character access key" 
+                                    style={{ paddingLeft: '40px', fontFamily: 'monospace' }}
+                                    value={accessKey}
+                                    onChange={(e) => setAccessKey(e.target.value)}
+                                />
+                            </div>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                                Your administrator provided this key for secure access.
+                            </p>
                         </div>
-                    </div>
+                    )}
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
                             <input type="checkbox" style={{ accentColor: 'var(--primary)' }} /> Remember me
                         </label>
-                        <a href="#" style={{ color: 'var(--primary)', fontWeight: '500' }}>Forgot password?</a>
+                        {loginMethod === 'standard' && <a href="#" style={{ color: 'var(--primary)', fontWeight: '500' }}>Forgot password?</a>}
                     </div>
 
                     <button 
