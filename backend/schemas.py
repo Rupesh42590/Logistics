@@ -70,6 +70,13 @@ class VehicleBase(BaseModel):
 class VehicleCreate(VehicleBase):
     pass
 
+class VehicleUpdate(BaseModel):
+    vehicle_number: Optional[str] = None
+    max_volume_m3: Optional[float] = None
+    max_weight_kg: Optional[float] = None
+    zone_id: Optional[int] = None
+    driver_id: Optional[int] = None
+
 class VehicleResponse(VehicleBase):
     id: int
     current_volume_m3: float = 0.0 
@@ -84,11 +91,13 @@ class DriverBase(BaseModel):
     name: str
 
 class DriverCreate(DriverBase):
+    employee_id: str
     vehicle_number: Optional[str] = None
+    password: Optional[str] = None
 
 class DriverResponse(DriverBase):
     id: int
-    access_key: Optional[str] = None
+    employee_id: Optional[str] = None
     role: UserRole = UserRole.DRIVER
     vehicle_number: Optional[str] = None
     
@@ -103,8 +112,18 @@ class OrderBase(BaseModel):
     height_cm: float
     weight_kg: float
     # pickup_location as lat/lon dict?
-    latitude: float
-    longitude: float
+    pickup_latitude: float
+    pickup_longitude: float
+    pickup_address: Optional[str] = None
+
+    drop_latitude: Optional[float] = None
+    drop_longitude: Optional[float] = None
+    drop_address: Optional[str] = None
+
+    # Legacy (mapped to pickup in main.py if needed, or just removed if we update frontend)
+    # We will try to allow frontend to send generic lat/lon but prefer specific.
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class OrderCreate(OrderBase):
     pass
@@ -127,3 +146,25 @@ class AssignOrderRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
+
+# Address Schemas
+class AddressBase(BaseModel):
+    label: Optional[str] = "Office"
+    recipient_name: str
+    mobile_number: Optional[str] = None
+    address_line1: Optional[str] = None
+    pincode: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    latitude: float
+    longitude: float
+
+class AddressCreate(AddressBase):
+    pass
+
+class AddressResponse(AddressBase):
+    id: int
+    user_id: int
+    
+    class Config:
+        from_attributes = True

@@ -187,3 +187,10 @@ h3 { font-size: 1.25rem; line-height: 1.75rem; }
 .badge-warning { background: #fef3c7; color: #92400e; }
 .badge-danger { background: #fee2e2; color: #b91c1c; }
 .badge-neutral { background: #f1f5f9; color: #475569; }
+
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-muted { color: var(--text-muted); }
+.mb-1 { margin-bottom: 0.25rem; }
+.block { display: block; }
+

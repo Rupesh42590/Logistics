@@ -7,7 +7,7 @@ import LocationPickerMap from '../components/LocationPickerMap';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signupMSME } = useAuth();
+  const { login, signupMSME, driverLogin } = useAuth();
   
   // State for Tab Switching
   const [activeTab, setActiveTab] = useState(location.pathname === '/signup' ? 'signup' : 'login');
@@ -18,7 +18,9 @@ export default function Login() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginMethod, setLoginMethod] = useState('standard'); // 'standard' or 'driver'
-  const [accessKey, setAccessKey] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [driverPassword, setDriverPassword] = useState('');
+  // const [accessKey, setAccessKey] = useState(''); // Removed
 
   // Signup State
   const [signupStep, setSignupStep] = useState(1);
@@ -52,7 +54,7 @@ export default function Login() {
     try {
       let role;
       if (loginMethod === 'driver') {
-          role = await driverLogin(accessKey);
+          role = await driverLogin(employeeId, driverPassword);
       } else {
           role = await login(loginEmail, loginPassword);
       }
@@ -91,19 +93,25 @@ export default function Login() {
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
+    if (signupStep === 2 && !signupForm.address) {
+        setSignupError("Please use the map to detect your location and address.");
+        return;
+    }
     setSignupError(null);
     setSignupLoading(true);
 
     try {
-      await signupMSME({
-        email: signupForm.email,
-        password: signupForm.password,
-        company_name: signupForm.companyName,
-        gst_number: signupForm.gstNumber,
-        address: signupForm.address,
-        latitude: signupForm.latitude,
-        longitude: signupForm.longitude,
-      });
+      await signupMSME(
+        {
+            companyName: signupForm.companyName,
+            gstNumber: signupForm.gstNumber,
+            address: signupForm.address
+        },
+        {
+            email: signupForm.email,
+            password: signupForm.password
+        }
+      );
       // On success, maybe switch to login or redirect?
       // navigate('/msme'); // Direct access
       
@@ -212,26 +220,41 @@ export default function Login() {
                             </div>
                         </>
                     ) : (
-                        <div className="form-group">
-                            <label className="form-label">Secure Access Key</label>
-                            <div style={{ position: 'relative' }}>
-                                <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <>
+                            <div className="form-group">
+                                <label className="form-label">Employee ID</label>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    </div>
+                                    <input 
+                                        required 
+                                        className="form-input" 
+                                        placeholder="Enter your Employee ID" 
+                                        style={{ paddingLeft: '40px' }}
+                                        value={employeeId}
+                                        onChange={(e) => setEmployeeId(e.target.value)}
+                                    />
                                 </div>
-                                <input 
-                                    required 
-                                    type="password" 
-                                    className="form-input" 
-                                    placeholder="Enter your 48-character access key" 
-                                    style={{ paddingLeft: '40px', fontFamily: 'monospace' }}
-                                    value={accessKey}
-                                    onChange={(e) => setAccessKey(e.target.value)}
-                                />
                             </div>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                                Your administrator provided this key for secure access.
-                            </p>
-                        </div>
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    </div>
+                                    <input 
+                                        required 
+                                        type="password" 
+                                        className="form-input" 
+                                        placeholder="••••••••" 
+                                        style={{ paddingLeft: '40px' }}
+                                        value={driverPassword}
+                                        onChange={(e) => setDriverPassword(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </>
                     )}
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
@@ -386,20 +409,17 @@ export default function Login() {
                     {signupStep === 2 && (
                         <div className="space-y-4">
                             <div className="form-group">
-                                <label className="form-label">Registered Address</label>
-                                <textarea 
-                                    required 
-                                    className="form-input" 
-                                    rows="2" 
-                                    placeholder="Plot No, Street, Area, City, State, Zip"
-                                    value={signupForm.address}
-                                    onChange={(e) => setSignupForm({...signupForm, address: e.target.value})}
-                                />
+                                {/* Address field removed, auto-detected via map */}
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Pin Location on Map</label>
                                 <div style={{ height: '300px', borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                                    <LocationPickerMap onLocationSelect={(loc) => setSignupForm({...signupForm, latitude: loc.lat, longitude: loc.lng})} />
+                                    <LocationPickerMap onLocationSelect={(loc) => setSignupForm({
+                                        ...signupForm, 
+                                        latitude: loc.lat, 
+                                        longitude: loc.lng,
+                                        address: loc.address ? loc.address : signupForm.address
+                                    })} />
                                 </div>
                                 {signupForm.latitude && (
                                     <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

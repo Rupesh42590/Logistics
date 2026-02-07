@@ -31,10 +31,10 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=True)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)
     role = Column(Enum(UserRole), default=UserRole.MSME)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)
-    access_key = Column(String, unique=True, index=True, nullable=True)
+    employee_id = Column(String, unique=True, index=True, nullable=True)
     
     company = relationship("Company", back_populates="users")
     orders = relationship("Order", back_populates="user")
@@ -81,9 +81,40 @@ class Order(Base):
     
     volume_m3 = Column(Float, nullable=False)
     
-    # pickup_location = Column(Geometry("POINT"), nullable=False)
-    pickup_location = Column(String, nullable=True) # Mocking geometry
+    # Locations
+    pickup_latitude = Column(Float, nullable=True)
+    pickup_longitude = Column(Float, nullable=True)
+    pickup_address = Column(String, nullable=True)
+    
+    drop_latitude = Column(Float, nullable=True)
+    drop_longitude = Column(Float, nullable=True)
+    drop_address = Column(String, nullable=True)
+
+    pickup_location = Column(String, nullable=True) # Kept for legacy support if needed
     assigned_vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
     
     user = relationship("User", back_populates="orders")
     vehicle = relationship("Vehicle", back_populates="orders")
+
+class Address(Base):
+    __tablename__ = "addresses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    label = Column(String, nullable=True) # e.g. "Home", "Office"
+    recipient_name = Column(String, nullable=False)
+    mobile_number = Column(String, nullable=True)
+    
+    # Simplified address storage as per user request (focus on lat/long + single string)
+    address_line1 = Column(String, nullable=True) 
+    pincode = Column(String, nullable=True)
+    city = Column(String, nullable=True) 
+    state = Column(String, nullable=True)
+    
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    
+    user = relationship("User", back_populates="addresses")
+
+# Update User model to include addresses relationship
+User.addresses = relationship("Address", back_populates="user")

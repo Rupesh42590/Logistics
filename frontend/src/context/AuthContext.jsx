@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
-const API_URL = 'http://localhost:8000';
+const API_URL = 'http://127.0.0.1:8000';
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -59,9 +59,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const driverLogin = async (accessKey) => {
+  const driverLogin = async (employeeId, password) => {
     try {
-        const res = await axios.post(`${API_URL}/driver/login`, { access_key: accessKey });
+        const res = await axios.post(`${API_URL}/driver/login`, { employee_id: employeeId, password: password });
         const { access_token } = res.data;
         
         localStorage.setItem('token', access_token);
@@ -77,6 +77,9 @@ export const AuthProvider = ({ children }) => {
         return userData.role;
     } catch (err) {
         console.error("Driver login failed", err);
+        console.log("Attempted URL:", `${API_URL}/driver/login`);
+        console.log("Error response:", err.response);
+        console.log("Error message:", err.message);
         throw err;
     }
   };

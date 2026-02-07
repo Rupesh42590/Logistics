@@ -60,6 +60,20 @@ export default function Signup() {
     }
   };
 
+  const handleValidation = () => {
+    if (step === 2 && !formData.address) {
+        setError("Please use the map to detect your location and address.");
+        return false;
+    }
+    return true;
+  };
+
+  const onFinalSubmit = (e) => {
+      e.preventDefault();
+      if (!handleValidation()) return;
+      handleSubmit(e);
+  };
+
   return (
     <AuthLayout type="signup" title="Streamline your shipments" subtitle="Create your partner account to get started.">
       
@@ -193,20 +207,17 @@ export default function Signup() {
         {step === 2 && (
             <div className="space-y-4">
                 <div className="form-group">
-                    <label className="form-label">Registered Address</label>
-                    <textarea 
-                        required 
-                        className="form-input" 
-                        rows="2" 
-                        placeholder="Plot No, Street, Area, City, State, Zip"
-                        value={formData.address}
-                        onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    />
+                    {/* Address field removed, auto-detected via map */}
                 </div>
                 <div className="form-group">
                     <label className="form-label">Pin Location on Map</label>
                     <div style={{ height: '300px', borderRadius: '0.75rem', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <LocationPickerMap onLocationSelect={(loc) => setFormData({...formData, latitude: loc.lat, longitude: loc.lng})} />
+                        <LocationPickerMap onLocationSelect={(loc) => setFormData({
+                            ...formData, 
+                            latitude: loc.lat, 
+                            longitude: loc.lng,
+                            address: loc.address ? loc.address : formData.address 
+                        })} />
                     </div>
                     {formData.latitude && (
                         <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

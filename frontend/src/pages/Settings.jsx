@@ -115,7 +115,7 @@ function ChangePasswordForm() {
 
         setLoading(true);
         try {
-            await axios.post('http://localhost:8000/auth/change-password', {
+            await axios.post('http://127.0.0.1:8000/auth/change-password', {
                 old_password: passwords.old_password,
                 new_password: passwords.new_password
             }, {

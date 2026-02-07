@@ -35,7 +35,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -129,47 +129,7 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 from schemas import OrderCreate, OrderResponse
 from models import Order
 
-@app.post("/orders", response_model=OrderResponse)
-async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Calculate Volume
-    volume = (order.length_cm * order.width_cm * order.height_cm) / 1000000.0
-    
-    # Format Location
-    pickup_loc_str = f"{order.latitude},{order.longitude}"
-    
-    new_order = Order(
-        user_id=current_user.id,
-        item_name=order.item_name,
-        length_cm=order.length_cm,
-        width_cm=order.width_cm,
-        height_cm=order.height_cm,
-        weight_kg=order.weight_kg,
-        volume_m3=volume,
-        pickup_location=pickup_loc_str,
-        status=models.OrderStatus.PENDING
-    )
-    
-    db.add(new_order)
-    await db.commit()
-    await db.refresh(new_order)
-    
-    # Map back to response schema
-    lat, lon = map(float, new_order.pickup_location.split(','))
-    
-    return OrderResponse(
-        id=new_order.id,
-        user_id=new_order.user_id,
-        item_name=new_order.item_name,
-        length_cm=new_order.length_cm,
-        width_cm=new_order.width_cm,
-        height_cm=new_order.height_cm,
-        weight_kg=new_order.weight_kg,
-        volume_m3=new_order.volume_m3,
-        status=new_order.status,
-        assigned_vehicle_id=new_order.assigned_vehicle_id,
-        latitude=lat,
-        longitude=lon
-    )
+
 
 # --- Geospatial Logic ---
 from shapely.geometry import Point, Polygon
@@ -180,7 +140,11 @@ import json
 async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Calculate Volume
     volume = (order.length_cm * order.width_cm * order.height_cm) / 1000000.0
-    pickup_loc_str = f"{order.latitude},{order.longitude}"
+    
+    # Use explicit pickup coords if available, else legacy
+    pick_lat = order.pickup_latitude if order.pickup_latitude is not None else order.latitude
+    pick_lon = order.pickup_longitude if order.pickup_longitude is not None else order.longitude
+    pickup_loc_str = f"{pick_lat},{pick_lon}"
     
     # --- Auto-Assignment Logic ---
     status_val = models.OrderStatus.PENDING
@@ -191,7 +155,7 @@ async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), c
     db_zones = result.scalars().all()
     
     matched_zone_id = None
-    point = Point(order.latitude, order.longitude)
+    point = Point(pick_lat, pick_lon)
     
     for z in db_zones:
         # Parse Geometry. stored as "lat,lng;lat,lng" or JSON
@@ -233,6 +197,12 @@ async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), c
         weight_kg=order.weight_kg,
         volume_m3=volume,
         pickup_location=pickup_loc_str,
+        pickup_latitude=pick_lat,
+        pickup_longitude=pick_lon,
+        pickup_address=order.pickup_address,
+        drop_latitude=order.drop_latitude,
+        drop_longitude=order.drop_longitude,
+        drop_address=order.drop_address,
         status=status_val,
         assigned_vehicle_id=assigned_vehicle_id
     )
@@ -240,8 +210,6 @@ async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), c
     db.add(new_order)
     await db.commit()
     await db.refresh(new_order)
-    
-    lat, lon = map(float, new_order.pickup_location.split(','))
     
     return OrderResponse(
         id=new_order.id,
@@ -254,8 +222,14 @@ async def create_order(order: OrderCreate, db: AsyncSession = Depends(get_db), c
         volume_m3=new_order.volume_m3,
         status=new_order.status,
         assigned_vehicle_id=new_order.assigned_vehicle_id,
-        latitude=lat,
-        longitude=lon
+        pickup_latitude=new_order.pickup_latitude,
+        pickup_longitude=new_order.pickup_longitude,
+        pickup_address=new_order.pickup_address,
+        drop_latitude=new_order.drop_latitude,
+        drop_longitude=new_order.drop_longitude,
+        drop_address=new_order.drop_address,
+        latitude=new_order.pickup_latitude,
+        longitude=new_order.pickup_longitude
     )
 
 @app.get("/orders", response_model=list[OrderResponse])
@@ -280,6 +254,9 @@ async def read_orders(db: AsyncSession = Depends(get_db), current_user: User = D
             except:
                 pass
         
+        if o.pickup_latitude is not None: lat = o.pickup_latitude
+        if o.pickup_longitude is not None: lon = o.pickup_longitude
+
         response.append(OrderResponse(
             id=o.id,
             user_id=o.user_id,
@@ -292,6 +269,12 @@ async def read_orders(db: AsyncSession = Depends(get_db), current_user: User = D
             status=o.status,
             assigned_vehicle_id=o.assigned_vehicle_id,
             assigned_vehicle_number=v.vehicle_number if v else None,
+            pickup_latitude=lat,
+            pickup_longitude=lon,
+            pickup_address=o.pickup_address,
+            drop_latitude=o.drop_latitude,
+            drop_longitude=o.drop_longitude,
+            drop_address=o.drop_address,
             latitude=lat,
             longitude=lon
         ))
@@ -305,8 +288,12 @@ async def get_compatible_vehicles(order_id: int, db: AsyncSession = Depends(get_
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    lat, lon = map(float, order.pickup_location.split(','))
-    point = Point(lat, lon)
+    # Use Drop Coordinates for Vehicle Recommendation (as requested)
+    if order.drop_latitude is None or order.drop_longitude is None:
+        # Fallback or empty if no drop location set
+        return []
+
+    point = Point(order.drop_latitude, order.drop_longitude)
     
     # 2. Get All Zones
     z_res = await db.execute(select(models.Zone))
@@ -317,6 +304,8 @@ async def get_compatible_vehicles(order_id: int, db: AsyncSession = Depends(get_
     for z in zones:
         try:
             coords = json.loads(z.geometry_coords)
+            # GeoJSON is usually [lng, lat], but we might be storing [lat, lng] based on frontend drawing.
+            # Let's assume consistent with storage: [lat, lng] tuples
             poly_coords = [(p[0], p[1]) for p in coords]
             polygon = Polygon(poly_coords)
             
@@ -329,7 +318,8 @@ async def get_compatible_vehicles(order_id: int, db: AsyncSession = Depends(get_
                 for v in vehs:
                      if v.max_weight_kg >= order.weight_kg and v.max_volume_m3 >= order.volume_m3:
                           compatible_vehicles.append(v)
-        except:
+        except Exception as e:
+            print(f"Zone check error: {e}")
             continue
             
     return [
@@ -596,6 +586,8 @@ async def delete_zone(zone_id: int, db: AsyncSession = Depends(get_db), current_
     return {"message": "Zone deleted successfully"}
 
 # Vehicle Endpoints
+from schemas import VehicleCreate, VehicleUpdate, VehicleResponse
+from models import Vehicle
 
 @app.post("/vehicles", response_model=VehicleResponse)
 async def create_vehicle(vehicle: VehicleCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -681,30 +673,73 @@ async def delete_vehicle(vehicle_id: int, db: AsyncSession = Depends(get_db), cu
 
     await db.delete(vehicle)
     await db.commit()
-    
     return {"message": "Vehicle deleted successfully"}
+
+@app.patch("/vehicles/{vehicle_id}", response_model=VehicleResponse)
+async def update_vehicle(vehicle_id: int, vehicle_update: VehicleUpdate, db: AsyncSession = Depends(get_db)):
+    # Fetch Vehicle
+    result = await db.execute(select(Vehicle).where(Vehicle.id == vehicle_id))
+    vehicle = result.scalars().first()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    # Update fields
+    update_data = vehicle_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(vehicle, key, value)
+    
+    await db.commit()
+    await db.refresh(vehicle)
+    
+    # Re-fetch zone for response
+    zone_resp = None
+    if vehicle.zone_id:
+        from models import Zone
+        z_res = await db.execute(select(Zone).where(Zone.id == vehicle.zone_id))
+        z = z_res.scalars().first()
+        if z:
+            zone_resp = ZoneResponse(
+                id=z.id,
+                name=z.name,
+                coordinates=json.loads(z.geometry_coords)
+            )
+
+    return VehicleResponse(
+        id=vehicle.id,
+        vehicle_number=vehicle.vehicle_number,
+        max_volume_m3=vehicle.max_volume_m3,
+        max_weight_kg=vehicle.max_weight_kg,
+        zone_id=vehicle.zone_id,
+        driver_id=vehicle.driver_id,
+        zone=zone_resp,
+        current_volume_m3=0.0,
+        utilization_percentage=0.0
+    )
+
 # Driver Management Endpoints
 @app.post("/drivers", response_model=DriverResponse)
 async def create_driver(driver: DriverCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     if current_user.role != models.UserRole.SUPER_ADMIN:
         raise HTTPException(status_code=403, detail="Only admins can create drivers")
     
-    # Generate unique access key
-    access_key = secrets.token_hex(24) # 48 chars
-    
-    # Generate a dummy email for the User model (since it depends on unique email)
+    # Check if employee_id already exists
+    existing = await db.execute(select(User).where(User.employee_id == driver.employee_id))
+    if existing.scalars().first():
+        raise HTTPException(status_code=400, detail="Employee ID already registered")
+
+    # Generate a dummy email for the User model
     dummy_email = f"driver_{uuid.uuid4().hex}@logisoft.driver"
     
-    # Use access_key as password (hashed) as well for legacy compatibility if needed
-    # but primarily we use access_key field.
-    hashed_pwd = get_password_hash(access_key)
+    # Default password or custom
+    pwd_to_hash = driver.password if driver.password else "Logistics@123"
+    hashed_pwd = get_password_hash(pwd_to_hash)
     
     new_user = User(
         name=driver.name, 
         email=dummy_email, 
         hashed_password=hashed_pwd, 
         role=models.UserRole.DRIVER,
-        access_key=access_key
+        employee_id=driver.employee_id
     )
     db.add(new_user)
     await db.commit()
@@ -724,7 +759,7 @@ async def create_driver(driver: DriverCreate, db: AsyncSession = Depends(get_db)
     return DriverResponse(
         id=new_user.id, 
         name=new_user.name, 
-        access_key=new_user.access_key, 
+        employee_id=new_user.employee_id, 
         role=new_user.role,
         vehicle_number=vehicle_number
     )
@@ -750,15 +785,19 @@ async def delete_driver(driver_id: int, db: AsyncSession = Depends(get_db), curr
     return {"message": "Driver deleted successfully"}
 
 class DriverLoginRequest(BaseModel):
-    access_key: str
+    employee_id: str
+    password: str
 
 @app.post("/driver/login", response_model=Token)
 async def driver_login(req: DriverLoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.access_key == req.access_key))
+    result = await db.execute(select(User).where(User.employee_id == req.employee_id))
     user = result.scalars().first()
     
     if not user or user.role != models.UserRole.DRIVER:
-        raise HTTPException(status_code=401, detail="Invalid Access Key")
+        raise HTTPException(status_code=401, detail="Invalid Credentials")
+    
+    if not verify_password(req.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid Credentials")
     
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}
@@ -779,7 +818,7 @@ async def read_drivers(db: AsyncSession = Depends(get_db), current_user: User = 
         response.append(DriverResponse(
             id=d.id,
             name=d.name,
-            access_key=d.access_key,
+            employee_id=d.employee_id,
             role=d.role,
             vehicle_number=v_num
         ))
@@ -800,6 +839,9 @@ async def get_driver_orders(db: AsyncSession = Depends(get_db), current_user: Us
                 lat, lon = map(float, o.pickup_location.split(','))
             except:
                 pass
+        if o.pickup_latitude is not None: lat = o.pickup_latitude
+        if o.pickup_longitude is not None: lon = o.pickup_longitude
+
         response.append(OrderResponse(
             id=o.id,
             user_id=o.user_id,
@@ -812,8 +854,57 @@ async def get_driver_orders(db: AsyncSession = Depends(get_db), current_user: Us
             status=o.status,
             assigned_vehicle_id=o.assigned_vehicle_id,
             assigned_vehicle_number=v.vehicle_number if v else None,
+            pickup_latitude=lat,
+            pickup_longitude=lon,
+            pickup_address=o.pickup_address,
+            drop_latitude=o.drop_latitude,
+            drop_longitude=o.drop_longitude,
+            drop_address=o.drop_address,
             latitude=lat,
             longitude=lon
         ))
     return response
+
+# Address Endpoints
+from schemas import AddressCreate, AddressResponse
+from models import Address
+
+@app.post("/addresses", response_model=AddressResponse)
+async def create_address(addr: AddressCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Validate lat long
+    if not -90 <= addr.latitude <= 90 or not -180 <= addr.longitude <= 180:
+        raise HTTPException(status_code=400, detail="Invalid coordinates")
+
+    new_addr = Address(
+        user_id=current_user.id,
+        label=addr.label,
+        recipient_name=addr.recipient_name,
+        mobile_number=addr.mobile_number,
+        address_line1=addr.address_line1,
+        pincode=addr.pincode,
+        city=addr.city,
+        state=addr.state,
+        latitude=addr.latitude,
+        longitude=addr.longitude
+    )
+    db.add(new_addr)
+    await db.commit()
+    await db.refresh(new_addr)
+    return new_addr
+
+@app.get("/addresses", response_model=list[AddressResponse])
+async def get_addresses(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Address).where(Address.user_id == current_user.id))
+    return result.scalars().all()
+
+@app.delete("/addresses/{addr_id}")
+async def delete_address(addr_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(select(Address).where(Address.id == addr_id, Address.user_id == current_user.id))
+    addr = result.scalars().first()
+    if not addr:
+        raise HTTPException(status_code=404, detail="Address not found")
+    
+    await db.delete(addr)
+    await db.commit()
+    return {"message": "Address deleted"}
 

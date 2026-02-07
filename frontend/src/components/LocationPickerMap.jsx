@@ -1,13 +1,35 @@
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap, GeoJSON } from 'react-leaflet';
-import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, GeoJSON } from 'react-leaflet';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { useModal } from '../context/ModalContext';
+import L from 'leaflet';
 
 // Common India Lat/Long
 const CENTER = [28.6139, 77.2090];
 const ZOOM = 11;
 
 function LocationMarker({ onLocationSelect, position, setPosition }) {
+  const markerRef = useRef(null);
+
+  const eventHandlers = useMemo(
+    () => ({
+      dragend() {
+        const marker = markerRef.current;
+        if (marker != null) {
+          const newPos = marker.getLatLng();
+          setPosition(newPos);
+          if (onLocationSelect) {
+            onLocationSelect(newPos);
+          }
+        }
+      },
+      click(e) {
+        // Optional: Center map on click
+        // map.flyTo(e.latlng, map.getZoom());
+      }
+    }),
+    [onLocationSelect, setPosition],
+  );
+
   const map = useMapEvents({
     click(e) {
       setPosition(e.latlng);
@@ -18,40 +40,45 @@ function LocationMarker({ onLocationSelect, position, setPosition }) {
   });
 
   return position === null ? null : (
-    <Marker position={position}></Marker>
+    <Marker
+      draggable={true}
+      eventHandlers={eventHandlers}
+      position={position}
+      ref={markerRef}
+    />
   );
 }
 
 // Component to update map center programmatically
-function MapUpdater({ center }) {
+function MapUpdater({ center, bounds }) {
   const map = useMap();
+
   useEffect(() => {
     if (center) {
-      map.flyTo(center, 13);
+      map.setView(center, 13);
+    } else if (bounds && bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [center, map]);
+  }, [center, bounds, map]);
   return null;
 }
 
-export default function LocationPickerMap({ onLocationSelect, style }) {
+export default function LocationPickerMap({ onLocationSelect, style, pincode, selectedLocation, suggestions = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [pincodeQuery, setPincodeQuery] = useState('');
   const [mapCenter, setMapCenter] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
-  const { showAlert } = useModal();
 
   // Boundary Data
   const [geoJsonData, setGeoJsonData] = useState(null);
   const [areaDetails, setAreaDetails] = useState(null);
   const [pincodePlaces, setPincodePlaces] = useState([]);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   // Fix for marker icon not showing
   useEffect(() => {
-    // This effectively fixes the missing icon issue in Leaflet + standard bundlers
-    // by deleting the default icon options which point to non-existent URLs
-    // and replacing them.
     /* eslint-disable global-require */
     /* eslint-disable no-underscore-dangle */
     delete L.Icon.Default.prototype._getIconUrl;
@@ -61,6 +88,30 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
       shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
     });
   }, []);
+
+  // Sync prop selectedLocation to internal state
+  useEffect(() => {
+    if (selectedLocation) {
+      setMapCenter([selectedLocation.lat, selectedLocation.lng]);
+      setMarkerPosition(selectedLocation);
+    }
+  }, [selectedLocation]);
+
+  // Suggestion Bounds Logic
+  const suggestionBounds = useMemo(() => {
+    if (!markerPosition && !mapCenter && suggestions.length > 0) {
+      return suggestions.map(s => [s.lat, s.lng]);
+    }
+    return null;
+  }, [suggestions, markerPosition, mapCenter]);
+
+  // Sync prop pincode to internal state and trigger search
+  useEffect(() => {
+    if (pincode && pincode.length === 6 && pincode !== pincodeQuery) {
+      setPincodeQuery(pincode);
+      fetchPincodeData(pincode);
+    }
+  }, [pincode]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -81,20 +132,17 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
           onLocationSelect(newPos);
         }
       } else {
-        showAlert("Not Found", "Location not found");
+        alert("Location not found");
       }
     } catch (err) {
       console.error("Search failed", err);
-      showAlert("Error", "Search failed. Please try again.");
+      alert("Search failed. Please try again.");
     } finally {
       setIsSearching(false);
     }
   };
 
-  const handlePincodeSearch = async (e) => {
-    if (e && e.key !== 'Enter' && e.type === 'keydown') return;
-    if (!pincodeQuery.trim()) return;
-
+  const fetchPincodeData = async (code) => {
     setIsSearching(true);
     setGeoJsonData(null);
     setAreaDetails(null);
@@ -103,7 +151,7 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
 
     try {
       // 1. Fetch Boundary & Centroid from Nominatim
-      const res = await axios.get(`https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(pincodeQuery)}&country=india&polygon_geojson=1&format=json`);
+      const res = await axios.get(`https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(code)}&country=india&polygon_geojson=1&format=json`);
 
       if (res.data && res.data.length > 0) {
         const first = res.data[0];
@@ -121,12 +169,10 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
         setAreaDetails(first.display_name);
 
         // 2. Fetch Nearby Villages/Suburbs using Overpass API
-        // Radius: 5000m (5km) around the centroid
         const overpassQuery = `[out:json];(node(around:5000,${lat},${lon})["place"~"village|suburb|neighbourhood|town"];);out;`;
         const placesRes = await axios.get(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`);
 
         if (placesRes.data && placesRes.data.elements) {
-          // Filter and map interesting tags
           const places = placesRes.data.elements
             .filter(el => el.tags.name)
             .map(el => ({
@@ -135,21 +181,26 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
               lon: el.lon
             }));
 
-          // Deduplicate by name to avoid clutter
           const uniquePlaces = [...new Map(places.map(item => [item.name, item])).values()];
           setPincodePlaces(uniquePlaces);
         }
 
       } else {
-        showAlert("Not Found", "Pincode not found or no boundary data available.");
+        // If triggered by prop, we might not want to alert intensely, but for now it helps debug
+        console.warn("Pincode not found or no boundary data available.");
       }
     } catch (err) {
       console.error("Pincode Search failed", err);
-      showAlert("Error", "Failed to fetch pincode data.");
     } finally {
       setIsSearching(false);
       setLoadingPlaces(false);
     }
+  };
+
+  const handlePincodeSearch = async (e) => {
+    if (e && e.key !== 'Enter' && e.type === 'keydown') return;
+    if (!pincodeQuery.trim()) return;
+    await fetchPincodeData(pincodeQuery);
   };
 
   const handlePlaceClick = (place) => {
@@ -164,6 +215,32 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
     }
   };
 
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newPos = { lat: latitude, lng: longitude };
+        setMapCenter([latitude, longitude]);
+        setMarkerPosition(newPos);
+        setGettingLocation(false);
+        if (onLocationSelect) {
+          onLocationSelect(newPos);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error", error);
+        alert("Unable to retrieve your location");
+        setGettingLocation(false);
+      }
+    );
+  };
+
   return (
     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', ...style }}>
       <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexDirection: 'column' }}>
@@ -176,15 +253,31 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
-            style={{ paddingRight: '40px' }}
+            style={{ paddingRight: '80px' }}
           />
-          <button
-            onClick={handleSearch}
-            style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}
-            title="Search Location"
-          >
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </button>
+          <div style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              onClick={handleLocateMe}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: gettingLocation ? 'var(--primary)' : 'var(--text-muted)' }}
+              title="Use Current Location"
+              disabled={gettingLocation}
+            >
+              {gettingLocation ? (
+                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                  <span className="visually-hidden">...</span>
+                </div>
+              ) : (
+                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1-8h2v-2h-2v2zm0 4h2v-2h-2v2z" /><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line></svg>
+              )}
+            </button>
+            <button
+              onClick={handleSearch}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}
+              title="Search Location"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+          </div>
         </div>
 
         {/* Pincode Search */}
@@ -223,7 +316,36 @@ export default function LocationPickerMap({ onLocationSelect, style }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <LocationMarker onLocationSelect={onLocationSelect} position={markerPosition} setPosition={setMarkerPosition} />
-          <MapUpdater center={mapCenter} />
+          <MapUpdater center={mapCenter} bounds={suggestionBounds} />
+
+          {/* Render Suggestions as grey markers */}
+          {!markerPosition && suggestions.map((s, idx) => (
+            <Marker
+              key={`suggest-${idx}`}
+              position={[s.lat, s.lng]}
+              icon={new L.Icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+              })}
+              eventHandlers={{
+                click: () => {
+                  const pos = { lat: s.lat, lng: s.lng };
+                  setMarkerPosition(pos);
+                  setMapCenter([s.lat, s.lng]);
+                  if (onLocationSelect) onLocationSelect(pos);
+                }
+              }}
+            >
+              <Popup>
+                <strong>Past Location:</strong><br />
+                {s.label}
+              </Popup>
+            </Marker>
+          ))}
 
           {/* Render Boundary if available */}
           {geoJsonData && (

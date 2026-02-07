@@ -39,10 +39,10 @@ export default function AdminDashboard() {
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           
           const [vehRes, ordRes, zoneRes, drvRes] = await Promise.all([
-              axios.get('http://localhost:8000/vehicles'),
-              axios.get('http://localhost:8000/orders'),
-              axios.get('http://localhost:8000/zones'),
-              axios.get('http://localhost:8000/drivers')
+              axios.get('http://127.0.0.1:8000/vehicles'),
+              axios.get('http://127.0.0.1:8000/orders'),
+              axios.get('http://127.0.0.1:8000/zones'),
+              axios.get('http://127.0.0.1:8000/drivers')
           ]);
           setVehicles(vehRes.data);
           setOrders(ordRes.data);
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                </div>
             </div>
 
-            <FleetGrid vehicles={filteredVehicles} orders={orders} onUpdate={fetchData} />
+            <FleetGrid vehicles={filteredVehicles} orders={orders} drivers={drivers} onUpdate={fetchData} />
           </>
       ) : activeTab === 'zones' ? (
           <ZoneManager />
@@ -255,8 +255,8 @@ export default function AdminDashboard() {
   );
 }
 
-function FleetGrid({ vehicles, orders, onUpdate }) {
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
+function FleetGrid({ vehicles, orders, drivers, onUpdate }) {
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
 
   if (vehicles.length === 0) {
       return <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles in fleet. Add one to get started.</div>;
@@ -274,6 +274,8 @@ function FleetGrid({ vehicles, orders, onUpdate }) {
       
       return { ...v, currentWeight, currentVol, utilPct, volUtil, weightUtil };
   });
+
+  const selectedVehicle = selectedVehicleId ? vehicleStats.find(v => v.id === selectedVehicleId) : null;
 
   const avgUtil = vehicleStats.length > 0 
     ? (vehicleStats.reduce((acc, v) => acc + v.utilPct, 0) / vehicleStats.length).toFixed(1) 
@@ -299,7 +301,7 @@ function FleetGrid({ vehicles, orders, onUpdate }) {
         <div 
             key={v.id} 
             className="card card-hover vehicle-card" 
-            onClick={() => setSelectedVehicle(v)}
+            onClick={() => setSelectedVehicleId(v.id)}
         >
             {/* Header */}
             <div className="vehicle-header">
@@ -363,9 +365,10 @@ function FleetGrid({ vehicles, orders, onUpdate }) {
 
     {selectedVehicle && (
         <VehicleDetailsModal 
-            vehicle={selectedVehicle}
-            orders={orders.filter(o => o.assigned_vehicle_id === selectedVehicle.id)}
-            onClose={() => setSelectedVehicle(null)}
+            vehicle={selectedVehicle} 
+            orders={orders.filter(o => o.assigned_vehicle_id === selectedVehicle.id)} 
+            drivers={drivers}
+            onClose={() => setSelectedVehicleId(null)}
             onUpdate={onUpdate}
         />
     )}
@@ -376,9 +379,10 @@ function FleetGrid({ vehicles, orders, onUpdate }) {
 
 
 // ... (in VehicleDetailsModal)
-function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
+const VehicleDetailsModal = ({ vehicle, orders, drivers = [], onClose, onUpdate }) => {
     const [confirmState, setConfirmState] = useState({ open: false, title: '', message: '', action: null });
     const [actionLoading, setActionLoading] = useState(false);
+    const [selectedDriverId, setSelectedDriverId] = useState('');
 
     const openConfirm = (title, message, action) => {
         setConfirmState({ open: true, title, message, action });
@@ -399,12 +403,37 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
         }
     };
 
+    const handleAssignDriver = async () => {
+        if (!selectedDriverId) return;
+        try {
+            await axios.patch(`http://127.0.0.1:8000/vehicles/${vehicle.id}`, {
+                driver_id: parseInt(selectedDriverId)
+            });
+            onUpdate();
+        } catch (err) {
+            console.error("Failed to assign driver", err);
+        }
+    };
+
+    const handleUnassignDriver = () => {
+        openConfirm(
+            "Unassign Driver",
+            "Are you sure you want to unassign this driver?",
+            async () => {
+                await axios.patch(`http://127.0.0.1:8000/vehicles/${vehicle.id}`, {
+                    driver_id: null
+                });
+                onUpdate();
+            }
+        );
+    };
+
     const handleUnassign = (orderId) => {
         openConfirm(
             "Unassign Order",
             "Are you sure you want to unassign this order?",
             async () => {
-                await axios.post(`http://localhost:8000/orders/${orderId}/unassign`);
+                await axios.post(`http://127.0.0.1:8000/orders/${orderId}/unassign`);
                 onUpdate();
             }
         );
@@ -424,12 +453,15 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
             "Delete Vehicle",
             "Are you sure you want to DELETE this vehicle? This action cannot be undone.",
             async () => {
-                await axios.delete(`http://localhost:8000/vehicles/${vehicle.id}`);
+                await axios.delete(`http://127.0.0.1:8000/vehicles/${vehicle.id}`);
                 onClose();
                 onUpdate(); 
             }
         );
     };
+
+    const currentDriver = drivers.find(d => d.id === vehicle.driver_id);
+    const unassignedDrivers = drivers.filter(d => !d.vehicle_number && d.id !== vehicle.driver_id);
 
     return (
         <div className="modal-overlay">
@@ -439,6 +471,52 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
                     <button onClick={onClose} className="modal-close-btn">&times;</button>
                 </div>
                 
+                {/* Driver Section */}
+                <div className="card" style={{ padding: '1rem', marginBottom: '1.5rem', background: '#f8fafc', border: '1px solid var(--border)' }}>
+                    <h4 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Driver Assignment</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                        {currentDriver ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#e0e7ff', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                    {currentDriver.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: '600' }}>{currentDriver.name}</div>
+                                    <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>ID: {currentDriver.employee_id}</div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ flex: 1 }}>
+                                <select 
+                                    className="form-input" 
+                                    value={selectedDriverId} 
+                                    onChange={(e) => setSelectedDriverId(e.target.value)}
+                                    style={{ width: '100%' }}
+                                >
+                                    <option value="">Select a driver...</option>
+                                    {unassignedDrivers.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name} ({d.employee_id})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <div style={{ minWidth: '120px', textAlign: 'right' }}>
+                            {currentDriver ? (
+                                <button onClick={handleUnassignDriver} className="btn-unassign">Unassign</button>
+                            ) : (
+                                <button 
+                                    onClick={handleAssignDriver} 
+                                    className="btn btn-primary"
+                                    disabled={!selectedDriverId}
+                                >
+                                    Assign Driver
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Stats Row */}
                 <div className="modal-stats-row" style={{ marginBottom: '1.5rem' }}>
                     <div>
@@ -521,7 +599,7 @@ function VehicleDetailsModal({ vehicle, orders, onClose, onUpdate }) {
             />
         </div>
     );
-}
+};
 // ...
 // ... in ZoneManager
 function ZoneManager() {
@@ -530,7 +608,7 @@ function ZoneManager() {
   const [zoneModal, setZoneModal] = useState({ open: false, geoJson: null, cb: null });
   
   useEffect(() => {
-      axios.get('http://localhost:8000/zones')
+      axios.get('http://127.0.0.1:8000/zones')
           .then(res => setZones(res.data))
           .catch(err => console.error(err));
   }, []);
@@ -550,7 +628,7 @@ function ZoneManager() {
           title: "Delete Zone",
           message: `Are you sure you want to delete zone "${zone.name}"?`,
           action: async () => {
-              await axios.delete(`http://localhost:8000/zones/${zone.id}`);
+              await axios.delete(`http://127.0.0.1:8000/zones/${zone.id}`);
               setZones(prev => prev.filter(item => item.id !== zone.id));
           }
       });
@@ -693,6 +771,7 @@ function OrderManager({ orders, onUpdate }) {
 }
 
 function AssignVehicleModal({ order, onClose, onSuccess }) {
+    const { token } = useAuth();
     const { showAlert } = useModal();
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -700,7 +779,13 @@ function AssignVehicleModal({ order, onClose, onSuccess }) {
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
-        axios.get(`http://localhost:8000/orders/${order.id}/compatible-vehicles`)
+        // Fetch compatible vehicles uses no auth for now, or maybe it should?
+        // Let's assume compatible vehicles endpoint is public or handled elsewhere.
+        // Actually, compatible vehicles endpoint likely doesn't verify user, so it works.
+        // But let's check:
+        // @app.get(... compatible-vehicles ...) -> Depends(get_db) -> No user check.
+        // Correct.
+        axios.get(`http://127.0.0.1:8000/orders/${order.id}/compatible-vehicles`)
             .then(res => {
                 setVehicles(res.data);
                 setLoading(false);
@@ -715,13 +800,15 @@ function AssignVehicleModal({ order, onClose, onSuccess }) {
         if (!selectedVehId) return;
         setSubmitting(true);
         try {
-            await axios.post(`http://localhost:8000/orders/${order.id}/assign`, {
+            await axios.post(`http://127.0.0.1:8000/orders/${order.id}/assign`, {
                 vehicle_id: parseInt(selectedVehId)
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
             });
             showAlert("Success", "Order assigned successfully!", onSuccess);
         } catch (err) {
             console.error("Assignment failed", err);
-            showAlert("Error", "Failed to assign order.");
+            showAlert("Error", "Failed to assign order. " + (err.response?.data?.detail || ""));
         } finally {
             setSubmitting(false);
         }
@@ -820,7 +907,7 @@ function AddVehicleModal({ onClose, onSuccess, drivers = [], zones = [] }) {
         }
 
         try {
-            await axios.post('http://localhost:8000/vehicles', {
+            await axios.post('http://127.0.0.1:8000/vehicles', {
                 ...formData,
                 max_weight_kg: parseFloat(formData.max_weight_kg),
                 max_volume_m3: parseFloat(formData.max_volume_m3),
@@ -930,7 +1017,7 @@ function AddZoneModal({ geoJson, onClose, onSuccess }) {
         const coords = geoJson.geometry.coordinates[0].map(pt => [pt[1], pt[0]]);
 
         try {
-            const res = await axios.post('http://localhost:8000/zones', {
+            const res = await axios.post('http://127.0.0.1:8000/zones', {
                 name,
                 coordinates: coords
             });
@@ -981,7 +1068,7 @@ function DriverManager({ drivers, onUpdate }) {
 
     const handleDelete = async () => {
         try {
-            await axios.delete(`http://localhost:8000/drivers/${deletingDriver.id}`);
+            await axios.delete(`http://127.0.0.1:8000/drivers/${deletingDriver.id}`);
             showAlert("Success", "Driver account deleted successfully.");
             onUpdate();
             setDeletingDriver(null);
@@ -998,7 +1085,8 @@ function DriverManager({ drivers, onUpdate }) {
                     <tr>
                         <th className="table-th">Name</th>
                         <th className="table-th">Vehicle</th>
-                        <th className="table-th">Access Key</th>
+                        <th className="table-th">Employee ID</th>
+                        <th className="table-th">Password</th>
                         <th className="table-th">ID</th>
                         <th className="table-th">Actions</th>
                     </tr>
@@ -1008,9 +1096,12 @@ function DriverManager({ drivers, onUpdate }) {
                         <tr key={d.id} className="table-td">
                             <td style={{ padding: '1rem', fontWeight: '500' }}>{d.name || '-'}</td>
                             <td style={{ padding: '1rem' }}>{d.vehicle_number || '-'}</td>
-                            <td style={{ padding: '1rem', fontFamily: 'monospace', fontSize: '0.75rem', maxWidth: '200px', wordBreak: 'break-all' }}>
-                                {d.access_key || '-'}
+                            <td style={{ padding: '1rem', fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                {d.employee_id || '-'}
                             </td>
+                             <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                Logistics@123
+                             </td>
                              <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>#{d.id}</td>
                              <td style={{ padding: '1rem' }}>
                                 <button 
@@ -1044,16 +1135,18 @@ function DriverManager({ drivers, onUpdate }) {
 
 function AddDriverModal({ onClose, onSuccess }) {
     const { showAlert } = useModal();
-    const [formData, setFormData] = useState({ name: '', vehicle_number: '' });
+    const [formData, setFormData] = useState({ name: '', employee_id: '', vehicle_number: '', password: '' });
     const [loading, setLoading] = useState(false);
-    const [generatedKey, setGeneratedKey] = useState(null);
+    // const [generatedKey, setGeneratedKey] = useState(null); // Removed
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await axios.post('http://localhost:8000/drivers', formData);
-            setGeneratedKey(res.data.access_key);
+            const res = await axios.post('http://127.0.0.1:8000/drivers', formData);
+            onSuccess(res.data);
+            showAlert("Success", "Driver added successfully.");
+            onClose();
         } catch (err) {
             console.error(err);
             showAlert("Error", err.response?.data?.detail || "Failed to create driver");
@@ -1061,56 +1154,7 @@ function AddDriverModal({ onClose, onSuccess }) {
         }
     };
 
-    if (generatedKey) {
-        return (
-            <div className="modal-overlay">
-                <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
-                    <div className="modal-header">
-                        <h3 className="modal-title">Driver Created!</h3>
-                    </div>
-                    <div style={{ padding: '1.5rem 0' }}>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                            Share this secure Access Key with the driver. They will need it to login.
-                        </p>
-                        <div style={{ 
-                            background: '#f1f5f9', 
-                            padding: '1rem', 
-                            borderRadius: '0.5rem', 
-                            fontFamily: 'monospace', 
-                            wordBreak: 'break-all',
-                            fontSize: '0.875rem',
-                            border: '1px solid var(--border)',
-                            marginBottom: '1rem'
-                        }}>
-                            {generatedKey}
-                        </div>
-                        <button 
-                            className="btn btn-secondary" 
-                            onClick={() => {
-                                navigator.clipboard.writeText(generatedKey);
-                                showAlert("Copied", "Key copied to clipboard");
-                            }}
-                            style={{ width: '100%', marginBottom: '0.5rem' }}
-                        >
-                            Copy to Clipboard
-                        </button>
-                    </div>
-                    <div className="modal-actions">
-                        <button 
-                            className="btn btn-primary" 
-                            style={{ width: '100%' }}
-                            onClick={() => {
-                                onSuccess();
-                                onClose();
-                            }}
-                        >
-                            Done
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // Removed generatedKey view
 
     return (
         <div className="modal-overlay">
@@ -1123,6 +1167,14 @@ function AddDriverModal({ onClose, onSuccess }) {
                     <div className="form-group">
                         <label className="form-label">Driver Name</label>
                         <input className="form-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required placeholder="John Doe" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Employee ID</label>
+                        <input className="form-input" value={formData.employee_id} onChange={e => setFormData({...formData, employee_id: e.target.value})} required placeholder="DRV001" />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">Password</label>
+                        <input className="form-input" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Default: Logistics@123" />
                     </div>
                     <div className="form-group">
                         <label className="form-label">Vehicle Number (Optional)</label>

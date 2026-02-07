@@ -12,6 +12,8 @@ import './mobile-overrides.css';
 import { AuthProvider } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
 
+import SavedAddressesPage from './pages/SaveAddressesPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -57,6 +59,14 @@ function App() {
               <ProtectedRoute role="DRIVER">
                 <AppLayout>
                   <DriverDashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/msme/addresses" element={
+              <ProtectedRoute role="MSME">
+                <AppLayout>
+                  <SavedAddressesPage />
                 </AppLayout>
               </ProtectedRoute>
             } />

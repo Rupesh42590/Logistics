@@ -307,3 +307,9 @@
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+
+.dimensions-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
