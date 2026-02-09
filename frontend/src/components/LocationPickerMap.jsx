@@ -113,6 +113,29 @@ export default function LocationPickerMap({ onLocationSelect, style, pincode, se
     }
   }, [pincode]);
 
+  const handleLocationSelection = async (pos, explicitAddress = null) => {
+    // Handle Leaflet LatLng object or plain object
+    const lat = pos.lat;
+    const lng = pos.lng;
+    
+    let address = explicitAddress;
+    if (!address) {
+        try {
+            const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+            if (res.data && res.data.display_name) {
+                address = res.data.display_name;
+            }
+        } catch (e) {
+            console.error("Geocoding error", e);
+        }
+    }
+    
+    // Update parent
+    if (onLocationSelect) {
+        onLocationSelect({ lat, lng, address }); 
+    }
+  };
+
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -125,12 +148,13 @@ export default function LocationPickerMap({ onLocationSelect, style, pincode, se
         const lat = parseFloat(first.lat);
         const lon = parseFloat(first.lon);
         const newPos = { lat, lng: lon };
+        const address = first.display_name;
 
         setMapCenter([lat, lon]);
         setMarkerPosition(newPos);
-        if (onLocationSelect) {
-          onLocationSelect(newPos);
-        }
+        
+        handleLocationSelection(newPos, address);
+
       } else {
         alert("Location not found");
       }
@@ -210,9 +234,10 @@ export default function LocationPickerMap({ onLocationSelect, style, pincode, se
 
     setMapCenter([lat, lon]);
     setMarkerPosition(newPos);
-    if (onLocationSelect) {
-      onLocationSelect(newPos);
-    }
+    
+    // Fetch address for place click as well, or use name? 
+    // Usually better to get full address for consistency
+    handleLocationSelection(newPos);
   };
 
   const handleLocateMe = () => {
@@ -229,9 +254,8 @@ export default function LocationPickerMap({ onLocationSelect, style, pincode, se
         setMapCenter([latitude, longitude]);
         setMarkerPosition(newPos);
         setGettingLocation(false);
-        if (onLocationSelect) {
-          onLocationSelect(newPos);
-        }
+        
+        handleLocationSelection(newPos);
       },
       (error) => {
         console.error("Geolocation error", error);
@@ -315,7 +339,7 @@ export default function LocationPickerMap({ onLocationSelect, style, pincode, se
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <LocationMarker onLocationSelect={onLocationSelect} position={markerPosition} setPosition={setMarkerPosition} />
+          <LocationMarker onLocationSelect={handleLocationSelection} position={markerPosition} setPosition={setMarkerPosition} />
           <MapUpdater center={mapCenter} bounds={suggestionBounds} />
 
           {/* Render Suggestions as grey markers */}
@@ -336,7 +360,7 @@ export default function LocationPickerMap({ onLocationSelect, style, pincode, se
                   const pos = { lat: s.lat, lng: s.lng };
                   setMarkerPosition(pos);
                   setMapCenter([s.lat, s.lng]);
-                  if (onLocationSelect) onLocationSelect(pos);
+                  handleLocationSelection(pos, s.label);
                 }
               }}
             >

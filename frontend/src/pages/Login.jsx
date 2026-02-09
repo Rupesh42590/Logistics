@@ -93,8 +93,9 @@ export default function Login() {
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    if (signupStep === 2 && !signupForm.address) {
-        setSignupError("Please use the map to detect your location and address.");
+    // Relaxed validation: If we have coordinates, we can proceed.
+    if (signupStep === 2 && (!signupForm.latitude || !signupForm.longitude)) {
+        setSignupError("Please use the map to detect your location.");
         return;
     }
     setSignupError(null);
@@ -105,7 +106,7 @@ export default function Login() {
         {
             companyName: signupForm.companyName,
             gstNumber: signupForm.gstNumber,
-            address: signupForm.address
+            address: signupForm.address || `Pinned Location (${signupForm.latitude}, ${signupForm.longitude})`
         },
         {
             email: signupForm.email,

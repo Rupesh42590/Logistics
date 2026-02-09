@@ -119,6 +119,10 @@ async def signup_msme(
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
+    
+    # Explicitly attach company to avoid lazy load error during serialization
+    new_user.company = new_company
+    
     return new_user
 
 @app.get("/users/me", response_model=UserResponse)
