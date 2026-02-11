@@ -25,7 +25,6 @@ export default function AppLayout({ children }) {
     : [
       { label: 'Dashboard', path: '/msme' },
       { label: 'Listed Companies', path: '/msme/addresses' },
-      { label: 'Shipments', path: '/msme/shipments' },
       { label: 'Settings', path: '/msme/settings' },
     ];
 

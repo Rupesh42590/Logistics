@@ -7,6 +7,10 @@ import AddAddressModal from '../components/AddAddressModal';
 import { API_BASE_URL } from '../apiConfig';
 import './MSMEPortal.css';
 
+// Ant Design imports
+import { Card, Input, Empty, Tag, Table, Button, Statistic, Row, Col, Drawer, Divider, Space, Typography } from 'antd';
+import { EnvironmentOutlined, PhoneOutlined, UserOutlined, PlusOutlined, SearchOutlined, CompassOutlined, BoxPlotOutlined } from '@ant-design/icons';
+
 export default function MSMEPortal() {
     const { user } = useAuth();
     const [orders, setOrders] = useState([]);
@@ -96,44 +100,54 @@ export default function MSMEPortal() {
     return (
         <div className="msme-container">
             {/* Header */}
-            <div className="portal-header">
+            <div className="msme-page-header">
                 <div>
-                    <h1 className="portal-title">Order Management</h1>
-                    <p className="portal-subtitle">Manage active shipments and book new logistics orders.</p>
+                    <h1 className="msme-page-title">Order Management</h1>
+                    <p className="msme-page-subtitle">Manage active shipments and book new logistics orders.</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowNewShipmentModal(true)}>
-                    + New Shipment
-                </button>
+                <Button 
+                    type="primary" 
+                    size="large"
+                    icon={<PlusOutlined />}
+                    onClick={() => setShowNewShipmentModal(true)}
+                    className="msme-primary-btn"
+                >
+                    New Shipment
+                </Button>
             </div>
 
-            {/* Scorecards */}
-            <div className="stats-row">
-                <div className="card" style={{ padding: '1.5rem' }}>
-                    <div className="stat-card-flex">
-                        <div>
-                            <span className="stat-label">Total Orders</span>
-                            <div className="stat-number-wrapper">
-                                <span className="stat-number">{orders.length}</span>
-                            </div>
-                        </div>
-                        <div className="stat-icon stat-icon-blue">🖥️</div>
+            {/* Stat Cards */}
+            <div className="msme-stats-row">
+                <div className="msme-stat-card msme-stat-total">
+                    <span className="msme-stat-label">Total Orders</span>
+                    <div className="msme-stat-value">
+                        <span className="msme-stat-number">{orders.length}</span>
                     </div>
                 </div>
-                <div className="card" style={{ padding: '1.5rem' }}>
-                    <div className="stat-card-flex">
-                        <div>
-                            <span className="stat-label">Pending Assignment</span>
-                            <div className="stat-number-wrapper">
-                                <span className="stat-number">{orders.filter(o => o.status === 'PENDING').length}</span>
-                                <span className="stat-number-suffix">Orders</span>
-                            </div>
-                        </div>
-                        <div className="stat-icon stat-icon-amber">🕒</div>
+                <div className="msme-stat-card msme-stat-pending">
+                    <span className="msme-stat-label">Pending Assignment</span>
+                    <div className="msme-stat-value">
+                        <span className="msme-stat-number">{orders.filter(o => o.status === 'PENDING').length}</span>
+                        <span className="msme-stat-suffix">orders</span>
+                    </div>
+                </div>
+                <div className="msme-stat-card msme-stat-assigned">
+                    <span className="msme-stat-label">Assigned</span>
+                    <div className="msme-stat-value">
+                        <span className="msme-stat-number">{orders.filter(o => o.status === 'ASSIGNED').length}</span>
+                        <span className="msme-stat-suffix">orders</span>
+                    </div>
+                </div>
+                <div className="msme-stat-card msme-stat-shipped">
+                    <span className="msme-stat-label">Shipped</span>
+                    <div className="msme-stat-value">
+                        <span className="msme-stat-number">{orders.filter(o => o.status === 'SHIPPED' || o.status === 'DELIVERED').length}</span>
+                        <span className="msme-stat-suffix">orders</span>
                     </div>
                 </div>
             </div>
 
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#334155', marginBottom: '1rem' }}>My Shipments</h2>
+            <h2 className="msme-section-title">My Shipments</h2>
 
             {/* Shipment Table */}
             <ShipmentTable orders={orders} onViewRoute={handleViewRoute} />
@@ -226,108 +240,130 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return d.toFixed(1) + " km";
 }
 
-// Extract Table to clean up main component
+// Extract Table to clean up main component - Redesigned with Ant Design
 function ShipmentTable({ orders, onViewRoute }) {
-    if (orders.length === 0) {
-        return <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No orders found. Create your first shipment!</div>;
-    }
+    // Define columns for Ant Design Table
+    const columns = [
+        {
+            title: 'Order ID',
+            dataIndex: 'id',
+            key: 'id',
+            width: 90,
+            render: (id) => <span className="msme-order-id">#{id}</span>,
+        },
+        {
+            title: 'Item Name',
+            dataIndex: 'item_name',
+            key: 'item_name',
+            width: 130,
+            ellipsis: true,
+            render: (name) => <span className="msme-item-name">{name || 'N/A'}</span>,
+        },
+        {
+            title: 'Route / Path',
+            key: 'route',
+            width: 320,
+            render: (_, order) => (
+                <div className="msme-route-cell">
+                    {/* Pickup */}
+                    <div className="msme-route-point">
+                        <div className="msme-route-dot msme-route-dot-pickup"></div>
+                        <div className="msme-route-info">
+                            <div className="msme-route-label msme-route-label-pickup">Pickup</div>
+                            <div className="msme-route-address" title={order.pickup_address || order.pickup_location || `${order.latitude?.toFixed(4)}, ${order.longitude?.toFixed(4)}`}>
+                                {order.pickup_address || order.pickup_location || `${order.latitude?.toFixed(4)}, ${order.longitude?.toFixed(4)}`}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Connector */}
+                    <div className="msme-route-connector">
+                        <div className="msme-route-line"></div>
+                        {order.drop_latitude && (
+                            <span className="msme-route-distance">
+                                {calculateDistance(order.latitude, order.longitude, order.drop_latitude, order.drop_longitude)}
+                            </span>
+                        )}
+                    </div>
+                    
+                    {/* Drop */}
+                    <div className="msme-route-point">
+                        <div className="msme-route-dot msme-route-dot-drop"></div>
+                        <div className="msme-route-info">
+                            <div className="msme-route-label msme-route-label-drop">Drop</div>
+                            <div className="msme-route-address" title={order.drop_address || order.drop_location || (order.drop_latitude ? `${order.drop_latitude.toFixed(4)}, ${order.drop_longitude.toFixed(4)}` : 'Destination not set')}>
+                                {order.drop_address || order.drop_location ?
+                                    (order.drop_address || order.drop_location) :
+                                    (order.drop_latitude ? `${order.drop_latitude.toFixed(4)}, ${order.drop_longitude.toFixed(4)}` : 
+                                        <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Not set</span>)
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: 'Dimensions',
+            key: 'dimensions',
+            width: 110,
+            render: (_, order) => (
+                <div className="msme-dim-text">
+                    {order.length_cm}×{order.width_cm}×{order.height_cm} cm<br />
+                    <strong>{order.weight_kg} kg</strong>
+                </div>
+            ),
+        },
+        {
+            title: 'Volume',
+            dataIndex: 'volume_m3',
+            key: 'volume',
+            width: 100,
+            render: (vol) => <span className="msme-dim-text">{vol?.toFixed(4)} m³</span>,
+        },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            key: 'status',
+            width: 110,
+            render: (status) => {
+                const classMap = {
+                    'SHIPPED': 'msme-status-shipped',
+                    'DELIVERED': 'msme-status-delivered',
+                    'ASSIGNED': 'msme-status-assigned',
+                    'IN_TRANSIT': 'msme-status-in_transit',
+                    'PENDING': 'msme-status-pending',
+                    'CANCELLED': 'msme-status-cancelled',
+                };
+                return <span className={`msme-status-badge ${classMap[status] || 'msme-status-pending'}`}>{status}</span>;
+            },
+        },
+        {
+            title: 'Action',
+            key: 'action',
+            width: 110,
+            render: (_, order) => (
+                <Button
+                    icon={<CompassOutlined />}
+                    onClick={() => onViewRoute(order)}
+                    className="msme-action-btn"
+                >
+                    View
+                </Button>
+            ),
+        },
+    ];
 
     return (
-        <div className="shipment-table-wrapper card">
-            <table className="shipment-data-table">
-                <thead className="shipment-table-head">
-                    <tr>
-                        <th className="shipment-th">ORDER ID</th>
-                        <th className="shipment-th">ITEM NAME</th>
-                        <th className="shipment-th" style={{ minWidth: '250px' }}>ROUTE / PATH</th>
-                        <th className="shipment-th">DIMENSIONS</th>
-                        <th className="shipment-th">VOLUME</th>
-                        <th className="shipment-th">ACTION</th>
-                        <th className="shipment-th">STATUS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {orders.map(order => (
-                        <tr key={order.id} className="shipment-tr">
-                            <td className="shipment-id-td">#{order.id}</td>
-                            <td className="shipment-td-bold">{order.item_name || 'N/A'}</td>
-                            <td className="shipment-td">
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {/* From Address */}
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                        <div style={{ minWidth: '16px', marginTop: '3px' }}>
-                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', border: '2px solid #22c55e', background: 'white' }}></div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#0f172a' }}>From:</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: '1.4' }}>
-                                                {order.pickup_address || order.pickup_location || `${order.latitude.toFixed(4)}, ${order.longitude.toFixed(4)}`}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Connector Visual */}
-                                    <div style={{ margin: '-4px 0 -4px 4px', borderLeft: '2px dotted #cbd5e1', height: '12px' }}></div>
-
-                                    {/* To Address */}
-                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                        <div style={{ minWidth: '16px', marginTop: '3px' }}>
-                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></div>
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#0f172a' }}>To:</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#475569', lineHeight: '1.4' }}>
-                                                {order.drop_address || order.drop_location ?
-                                                    (order.drop_address || order.drop_location) :
-                                                    (order.drop_latitude ? `${order.drop_latitude.toFixed(4)}, ${order.drop_longitude.toFixed(4)}` : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Destination not set</span>)
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Distance Summary */}
-                                    {order.drop_latitude && (
-                                        <div style={{ fontSize: '0.75rem', color: '#6366f1', background: '#eef2ff', padding: '2px 8px', borderRadius: '4px', width: 'fit-content', fontWeight: '500', marginTop: '4px' }}>
-                                            Est. {calculateDistance(order.latitude, order.longitude, order.drop_latitude, order.drop_longitude)}
-                                        </div>
-                                    )}
-                                </div>
-                            </td>
-                            <td className="shipment-td-muted">{order.length_cm}x{order.width_cm}x{order.height_cm} cm • {order.weight_kg} kg</td>
-                            <td className="shipment-td-muted">{order.volume_m3.toFixed(4)} m³</td>
-                            <td className="shipment-td">
-                                <button
-                                    onClick={() => onViewRoute(order)}
-                                    style={{
-                                        padding: '6px 12px',
-                                        borderRadius: '6px',
-                                        border: '1px solid #e2e8f0',
-                                        background: 'white',
-                                        color: '#334155',
-                                        fontSize: '0.8rem',
-                                        fontWeight: '500',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    className="hover:bg-slate-50"
-                                >
-                                    <span style={{ fontSize: '1rem' }}>🗺️</span> View Route
-                                </button>
-                            </td>
-                            <td className="shipment-td">
-                                <span className={`badge ${order.status === 'SHIPPED' ? 'badge-success' :
-                                    order.status === 'ASSIGNED' ? 'badge-warning' : 'badge-neutral'
-                                    }`}>
-                                    {order.status}
-                                </span>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <div className="msme-table-card">
+            <Table
+                columns={columns}
+                dataSource={orders}
+                rowKey="id"
+                pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `Total ${total} orders` }}
+                locale={{ emptyText: <Empty description="No orders found. Create your first shipment!" /> }}
+                scroll={{ x: 'max-content' }}
+            />
         </div>
     );
 }
@@ -615,62 +651,90 @@ function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
                     </div>
 
                     <div className="new-shipment-grid">
-                        {/* Left Panel: Listed Companies */}
-                        <div className="left-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingRight: '1rem', borderRight: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <label className="form-label" style={{ marginBottom: 0 }}>Select Drop Account</label>
-                                <button
-                                    type="button"
-                                    className="btn-xs btn-outline"
-                                    style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                        {/* Left Panel: Listed Companies - Redesigned with Ant Design */}
+                        <div className="left-panel flex flex-col h-full pr-4">
+                            <div className="flex justify-between items-center" style={{ marginBottom: 16 }}>
+                                <Typography.Text strong style={{ fontSize: 15, color: '#334155' }}>Select Drop Account</Typography.Text>
+                                <Button
+                                    size="small"
+                                    icon={<PlusOutlined />}
                                     onClick={() => setShowAddAddressModal(true)}
+                                    style={{
+                                        borderRadius: 20,
+                                        border: '1.5px dashed #818cf8',
+                                        color: '#4f46e5',
+                                        fontWeight: 600,
+                                        fontSize: 12,
+                                        padding: '0 16px',
+                                        height: 32,
+                                        background: '#eef2ff',
+                                    }}
                                 >
-                                    + Add New
-                                </button>
+                                    Add New
+                                </Button>
                             </div>
 
-                            <input
-                                type="text"
+                            <Input
                                 placeholder="Search listed companies..."
-                                className="form-input"
-                                style={{ marginBottom: '1rem' }}
+                                prefix={<SearchOutlined className="text-slate-400" />}
+                                allowClear
                                 value={companySearch}
                                 onChange={e => setCompanySearch(e.target.value)}
+                                style={{ marginBottom: 16 }}
+                                size="large"
                             />
 
-                            <div className="saved-address-list" style={{ flex: 1, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.5rem', backgroundColor: '#f8fafc' }}>
+                            <div className="flex-1 overflow-y-auto p-2 bg-slate-50 rounded-lg border border-slate-200" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                 {savedAddresses
                                     .filter(addr =>
                                         (addr.label || '').toLowerCase().includes(companySearch.toLowerCase()) ||
                                         (addr.recipient_name || '').toLowerCase().includes(companySearch.toLowerCase())
                                     )
                                     .map(addr => (
-                                        <div
+                                        <Card
                                             key={addr.id}
-                                            className="saved-address-item"
+                                            size="small"
+                                            hoverable
                                             onClick={() => handleAddressSelect(addr, activeLocationType)}
-                                            style={{
-                                                padding: '10px',
-                                                marginBottom: '8px',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                border: '1px solid #e2e8f0',
-                                                backgroundColor: 'white',
-                                                transition: 'all 0.2s',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                                            }}
-                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                            onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                                            className="cursor-pointer transition-all hover:border-indigo-500 hover:shadow-md"
+                                            styles={{ body: { padding: '12px 16px' } }}
                                         >
-                                            <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '2px' }}>{addr.label}</div>
-                                            <div style={{ fontSize: '0.85em', color: '#64748b' }}>{addr.recipient_name}</div>
-                                            <div style={{ fontSize: '0.8em', color: '#94a3b8' }}>{addr.city}, {addr.state}</div>
-                                        </div>
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Tag color="blue" className="m-0">{addr.label || 'Company'}</Tag>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-slate-700 font-medium mb-1">
+                                                        <UserOutlined className="text-slate-400" />
+                                                        {addr.recipient_name}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                                                        <EnvironmentOutlined className="text-slate-400" />
+                                                        {addr.city}, {addr.state}
+                                                    </div>
+                                                    {addr.mobile_number && (
+                                                        <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
+                                                            <PhoneOutlined />
+                                                            {addr.mobile_number}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </Card>
                                     ))}
-                                {savedAddresses.length === 0 && (
-                                    <div className="text-sm text-muted" style={{ padding: '2rem', textAlign: 'center' }}>
-                                        No companies found.<br />Click "+ Add New" to add one.
-                                    </div>
+                                {savedAddresses.filter(addr =>
+                                    (addr.label || '').toLowerCase().includes(companySearch.toLowerCase()) ||
+                                    (addr.recipient_name || '').toLowerCase().includes(companySearch.toLowerCase())
+                                ).length === 0 && (
+                                    <Empty
+                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                        description={
+                                            <span className="text-slate-500">
+                                                No companies found.<br />Click "Add New" to add one.
+                                            </span>
+                                        }
+                                        className="py-8"
+                                    />
                                 )}
                             </div>
                         </div>
@@ -679,42 +743,10 @@ function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
                         <form className="right-panel" onSubmit={e => e.preventDefault()}>
                             <div className="right-panel-scroll">
 
-                                {/* Pickup Details */}
-                                <h4 className="section-title">Pickup Location</h4>
-                                <div style={{ height: '250px', marginBottom: '1rem', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', position: 'relative', zIndex: 0 }}>
-                                    <div style={{ pointerEvents: 'none', height: '100%', width: '100%' }}>
-                                        <LocationPickerMap
-                                            onLocationSelect={(loc) => handleMapLocationSelect(loc, 'pickup')}
-                                            selectedLocation={pickupLocation}
-                                            style={{ width: '100%', height: '100%' }}
-                                        />
-                                    </div>
-                                    {isLocating && (
-                                        <div style={{
-                                            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                            background: 'rgba(255,255,255,0.6)', zIndex: 1100,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            flexDirection: 'column', color: '#0284c7', fontWeight: 'bold'
-                                        }}>
-                                            <div className="spinner" style={{marginBottom: '5px'}}></div>
-                                            Locating Address...
-                                        </div>
-                                    )}
-                                </div>
-                                {addressLoading && <div className="text-sm text-muted mb-2" style={{ fontStyle: 'italic' }}>Updating address from map location...</div>}
-                                <div className="form-group">
-                                    <label className="form-label">Pickup Address</label>
-                                    <div style={{ fontSize: '0.9rem', color: '#334155', background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                                        <div style={{ fontWeight: '500', marginBottom: '2px' }}>{addressLine1}</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{city}, {state} - {pincode}</div>
-                                    </div>
-                                    <p className="text-xs text-muted mt-1">
-                                        This address is auto-detected from the map marker. Ensure it is correct.
-                                    </p>
-                                </div>
+                                {/* Pickup details are auto-detected from user profile and hidden from UI */}
 
                                 {/* Section: Drop Details (Always Visible) */}
-                                <h4 className="section-title">Drop Details</h4>
+                                <h4 className="section-title" style={{ marginTop: 8, marginBottom: 12 }}>Drop Details</h4>
                                 {/* Show Selected Company Card or Placeholder */}
                                 {dropAddressLine1 ? (
                                     <div style={{ 
@@ -763,7 +795,7 @@ function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
                                 <hr className="divider" />
 
                                 {/* Section: Shipment Details */}
-                                <h4 className="section-title">Shipment Details</h4>
+                                <h4 className="section-title" style={{ marginTop: 8, marginBottom: 12 }}>Shipment Details</h4>
                                 <div className="form-group">
                                     <label className="form-label">Item Description</label>
                                     <input className="form-input" placeholder="e.g. Electronics" value={itemName} onChange={e => setItemName(e.target.value)} />

@@ -1,3 +1,6 @@
+/* TailwindCSS v4 */
+@import "tailwindcss";
+
 :root {
   /* LogiSoft Palette */
   --primary: #4f46e5;      /* Indigo-600 */
