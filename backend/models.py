@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Enum, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 # from geoalchemy2 import Geometry
 import enum
@@ -13,6 +13,7 @@ class OrderStatus(str, enum.Enum):
     PENDING = "PENDING"
     ASSIGNED = "ASSIGNED"
     SHIPPED = "SHIPPED"
+    DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
 
 class Company(Base):
@@ -38,6 +39,7 @@ class User(Base):
     
     company = relationship("Company", back_populates="users")
     orders = relationship("Order", back_populates="user")
+    addresses = relationship("Address", back_populates="user")
 
 class Zone(Base):
     __tablename__ = "zones"
@@ -92,6 +94,10 @@ class Order(Base):
 
     pickup_location = Column(String, nullable=True) # Kept for legacy support if needed
     assigned_vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True)
+    
+    # Dual Confirmation Flags
+    driver_confirmed_delivery = Column(Boolean, default=False)
+    user_confirmed_delivery = Column(Boolean, default=False)
     
     user = relationship("User", back_populates="orders")
     vehicle = relationship("Vehicle", back_populates="orders")

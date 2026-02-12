@@ -38,6 +38,28 @@ export default function MSMEPortal() {
         fetchOrders();
     };
 
+    const handleCancelOrder = async (order) => {
+        if(!confirm(`Are you sure you want to cancel Order #${order.id}?`)) return;
+        try {
+            await axios.post(`${API_BASE_URL}/orders/${order.id}/cancel`);
+            fetchOrders();
+        } catch (err) {
+             console.error("Cancel failed", err);
+             alert(err.response?.data?.detail || "Failed to cancel order");
+        }
+    };
+
+    const handleConfirmDelivery = async (order) => {
+        if(!confirm(`Confirm delivery for Order #${order.id}?`)) return;
+        try {
+             await axios.post(`${API_BASE_URL}/orders/${order.id}/confirm-delivery`);
+             fetchOrders();
+        } catch (err) {
+             console.error("Confirmation failed", err);
+             alert(err.response?.data?.detail || "Failed to confirm delivery");
+        }
+    };
+
     const [selectedOrderForRoute, setSelectedOrderForRoute] = useState(null);
 
     const handleViewRoute = (order) => {
@@ -97,6 +119,24 @@ export default function MSMEPortal() {
         return suggestions;
     }, [user, orders]);
 
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('ALL');
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            const matchesSearch = (
+                (order.item_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (order.id || '').toString().includes(searchTerm) ||
+                (order.pickup_address || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (order.drop_address || '').toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            const matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [orders, searchTerm, statusFilter]);
+
     return (
         <div className="msme-container">
             {/* Header */}
@@ -149,8 +189,47 @@ export default function MSMEPortal() {
 
             <h2 className="msme-section-title">My Shipments</h2>
 
+            {/* Search and Filter Bar */}
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <Input
+                    placeholder="Search orders by ID, Item, or Location..."
+                    prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    style={{ flex: 1, minWidth: '200px', height: '40px', borderRadius: '8px' }}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {['ALL', 'PENDING', 'ASSIGNED', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map(status => (
+                        <button
+                            key={status}
+                            onClick={() => setStatusFilter(status)}
+                            style={{
+                                padding: '0 16px',
+                                height: '40px',
+                                borderRadius: '8px',
+                                border: statusFilter === status ? 'none' : '1px solid #e2e8f0',
+                                background: statusFilter === status ? '#2563eb' : 'white',
+                                color: statusFilter === status ? 'white' : '#64748b',
+                                fontWeight: 600,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            {status === 'ALL' ? 'All Orders' : status.charAt(0) + status.slice(1).toLowerCase()}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Shipment Table */}
-            <ShipmentTable orders={orders} onViewRoute={handleViewRoute} />
+            <ShipmentTable 
+                orders={filteredOrders} 
+                onViewRoute={handleViewRoute} 
+                onCancel={handleCancelOrder}
+                onConfirm={handleConfirmDelivery}
+            />
 
             {/* Modals */}
             {/* Modals */}
@@ -241,7 +320,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 // Refactored Shipment List - Card Layout
-function ShipmentTable({ orders, onViewRoute }) {
+function ShipmentTable({ orders, onViewRoute, onCancel, onConfirm }) {
     if (!orders || orders.length === 0) {
         return <Empty description="No orders found. Create your first shipment!" />;
     }
@@ -310,7 +389,7 @@ function ShipmentTable({ orders, onViewRoute }) {
 
                              <div className="msme-meta-group">
                                 <span className="msme-meta-label">Volume</span>
-                                <span className="msme-meta-value">{order.volume_m3?.toFixed(4)} m³</span>
+                                <span className="msme-meta-value">{order.volume_m3 < 0.001 ? order.volume_m3?.toFixed(6) : order.volume_m3?.toFixed(4)} m³</span>
                             </div>
 
                             <div className="msme-actions">
@@ -321,6 +400,34 @@ function ShipmentTable({ orders, onViewRoute }) {
                                 >
                                     View Route
                                 </Button>
+                                
+                                {(order.status === 'PENDING' || order.status === 'ASSIGNED') && (
+                                    <Button 
+                                        danger 
+                                        onClick={() => onCancel(order)}
+                                        className="msme-action-btn"
+                                        style={{ marginLeft: '8px' }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+
+                                {order.status === 'SHIPPED' && (
+                                     !order.user_confirmed_delivery ? (
+                                        <Button 
+                                            type="primary"
+                                            onClick={() => onConfirm(order)}
+                                            className="msme-action-btn"
+                                            style={{ marginLeft: '8px', background: '#16a34a', borderColor: '#16a34a' }}
+                                        >
+                                            Confirm Delivery
+                                        </Button>
+                                     ) : (
+                                         <span style={{ marginLeft: '8px', fontSize: '0.85rem', color: '#d97706', fontWeight: 500 }}>
+                                             Waiting for Driver
+                                         </span>
+                                     )
+                                )}
                             </div>
                         </div>
                     </div>

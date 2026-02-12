@@ -135,6 +135,8 @@ class OrderResponse(OrderBase):
     volume_m3: float
     assigned_vehicle_id: Optional[int] = None
     assigned_vehicle_number: Optional[str] = None
+    driver_confirmed_delivery: bool = False
+    user_confirmed_delivery: bool = False
     
     class Config:
         from_attributes = True

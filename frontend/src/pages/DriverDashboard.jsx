@@ -55,6 +55,32 @@ export default function DriverDashboard() {
         }
     };
 
+    const handleStartShipment = async (orderId) => {
+        if (!confirm("Are you sure you want to start this trip?")) return;
+        try {
+            await axios.post(`http://127.0.0.1:8000/orders/${orderId}/start-shipment`);
+            // Refresh orders
+            const res = await axios.get('http://127.0.0.1:8000/driver/orders');
+            setOrders(res.data);
+        } catch (err) {
+            console.error(err);
+            alert(err.response?.data?.detail || "Failed to start shipment");
+        }
+    };
+
+    const handleConfirmDelivery = async (orderId) => {
+        if (!confirm("Confirm delivery?")) return;
+        try {
+            await axios.post(`http://127.0.0.1:8000/orders/${orderId}/confirm-delivery`);
+            // Refresh orders
+            const res = await axios.get('http://127.0.0.1:8000/driver/orders');
+            setOrders(res.data);
+        } catch (err) {
+            console.error(err);
+            alert(err.response?.data?.detail || "Failed to confirm delivery");
+        }
+    };
+
     const completedOrders = orders.filter(o => o.status === 'SHIPPED').length;
     const assignedOrders = orders.filter(o => o.status === 'ASSIGNED').length;
 
@@ -164,6 +190,68 @@ export default function DriverDashboard() {
                                         )}
                                     </div>
                                 </div>
+
+                                
+                                {/* Order Actions */}
+                                {(o.status === 'ASSIGNED' || o.status === 'SHIPPED') && (
+                                    <div className="order-actions" style={{marginTop: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', display: 'flex', justifyContent: 'flex-end'}}>
+                                        {o.status === 'ASSIGNED' && (
+                                            <button 
+                                                className="btn-action start-trip"
+                                                onClick={() => handleStartShipment(o.id)}
+                                                style={{
+                                                    background: '#2563eb', 
+                                                    color: 'white', 
+                                                    padding: '0.5rem 1.5rem', 
+                                                    borderRadius: '0.5rem',
+                                                    fontWeight: 500,
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+                                                }}
+                                            >
+                                                Start Trip
+                                            </button>
+                                        )}
+                                        {o.status === 'SHIPPED' && (
+                                            !o.driver_confirmed_delivery ? (
+                                                <button 
+                                                    className="btn-action mark-delivered"
+                                                    onClick={() => handleConfirmDelivery(o.id)}
+                                                    style={{
+                                                        background: '#16a34a', 
+                                                        color: 'white', 
+                                                        padding: '0.5rem 1.5rem', 
+                                                        borderRadius: '0.5rem',
+                                                        fontWeight: 500,
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        boxShadow: '0 2px 4px rgba(22, 163, 74, 0.2)'
+                                                    }}
+                                                >
+                                                    Mark Delivered
+                                                </button>
+                                            ) : (
+                                                <div style={{
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '0.5rem',
+                                                    color: '#d97706',
+                                                    background: '#fffbeb',
+                                                    padding: '0.5rem 1rem',
+                                                    borderRadius: '0.5rem',
+                                                    fontSize: '0.875rem',
+                                                    fontWeight: 500
+                                                }}>
+                                                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    Waiting for Customer Confirmation
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

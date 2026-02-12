@@ -273,6 +273,8 @@ async def read_orders(db: AsyncSession = Depends(get_db), current_user: User = D
             status=o.status,
             assigned_vehicle_id=o.assigned_vehicle_id,
             assigned_vehicle_number=v.vehicle_number if v else None,
+            driver_confirmed_delivery=o.driver_confirmed_delivery,
+            user_confirmed_delivery=o.user_confirmed_delivery,
             pickup_latitude=lat,
             pickup_longitude=lon,
             pickup_address=o.pickup_address,
@@ -405,21 +407,20 @@ async def cancel_order(
         raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
 
     # Check Status
-    if order.status != models.OrderStatus.PENDING:
-        raise HTTPException(status_code=400, detail="Only pending orders can be cancelled")
+    allowed_statuses = [models.OrderStatus.PENDING, models.OrderStatus.ASSIGNED]
+    if order.status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail="Only pending or assigned orders can be cancelled")
 
     # Update
     order.status = models.OrderStatus.CANCELLED
+    order.assigned_vehicle_id = None # Unassign from vehicle
     
     await db.commit()
     await db.refresh(order)
     
-    lat, lon = 0.0, 0.0
-    if order.pickup_location:
-         try:
-             lat, lon = map(float, order.pickup_location.split(','))
-         except:
-             pass
+    lat, lon = (0.0, 0.0)
+    if order.pickup_latitude: lat = order.pickup_latitude
+    if order.pickup_longitude: lon = order.pickup_longitude
 
     return OrderResponse(
         id=order.id,
@@ -433,55 +434,14 @@ async def cancel_order(
         status=order.status,
         assigned_vehicle_id=order.assigned_vehicle_id,
         assigned_vehicle_number=None,
-        latitude=lat,
-        longitude=lon
-    )
-
-@app.post("/orders/{order_id}/cancel", response_model=OrderResponse)
-async def cancel_order(
-    order_id: int, 
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # Fetch Order
-    result = await db.execute(select(Order).where(Order.id == order_id))
-    order = result.scalars().first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    # Verify Ownership
-    if order.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to cancel this order")
-
-    # Check Status
-    if order.status != models.OrderStatus.PENDING:
-        raise HTTPException(status_code=400, detail="Only pending orders can be cancelled")
-
-    # Update
-    order.status = models.OrderStatus.CANCELLED
-    
-    await db.commit()
-    await db.refresh(order)
-    
-    lat, lon = 0.0, 0.0
-    if order.pickup_location:
-         try:
-             lat, lon = map(float, order.pickup_location.split(','))
-         except:
-             pass
-
-    return OrderResponse(
-        id=order.id,
-        user_id=order.user_id,
-        item_name=order.item_name,
-        length_cm=order.length_cm,
-        width_cm=order.width_cm,
-        height_cm=order.height_cm,
-        weight_kg=order.weight_kg,
-        volume_m3=order.volume_m3,
-        status=order.status,
-        assigned_vehicle_id=order.assigned_vehicle_id,
-        assigned_vehicle_number=None,
+        driver_confirmed_delivery=order.driver_confirmed_delivery,
+        user_confirmed_delivery=order.user_confirmed_delivery,
+        pickup_latitude=lat,
+        pickup_longitude=lon,
+        pickup_address=order.pickup_address,
+        drop_latitude=order.drop_latitude,
+        drop_longitude=order.drop_longitude,
+        drop_address=order.drop_address,
         latitude=lat,
         longitude=lon
     )
@@ -528,6 +488,157 @@ async def unassign_order(
         status=order.status,
         assigned_vehicle_id=order.assigned_vehicle_id,
         assigned_vehicle_number=None,
+        driver_confirmed_delivery=order.driver_confirmed_delivery,
+        user_confirmed_delivery=order.user_confirmed_delivery,
+        latitude=lat,
+        longitude=lon,
+        pickup_latitude=order.pickup_latitude,
+        pickup_longitude=order.pickup_longitude,
+        pickup_address=order.pickup_address,
+        drop_latitude=order.drop_latitude,
+        drop_longitude=order.drop_longitude,
+        drop_address=order.drop_address
+    )
+
+@app.post("/orders/{order_id}/start-shipment", response_model=OrderResponse)
+async def start_shipment(
+    order_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Verify Driver
+    if current_user.role != models.UserRole.DRIVER:
+        raise HTTPException(status_code=403, detail="Only drivers can start shipments")
+
+    # Fetch Order
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Verify Assignment
+    # Check if driver is assigned to the vehicle
+    v_res = await db.execute(select(Vehicle).where(Vehicle.driver_id == current_user.id))
+    driver_vehicle = v_res.scalars().first()
+    
+    if not driver_vehicle or order.assigned_vehicle_id != driver_vehicle.id:
+         raise HTTPException(status_code=403, detail="This order is not assigned to your vehicle")
+
+    # Update Status
+    if order.status != models.OrderStatus.ASSIGNED:
+        raise HTTPException(status_code=400, detail="Order must be assigned before starting shipment")
+
+    order.status = models.OrderStatus.SHIPPED
+    await db.commit()
+    await db.refresh(order)
+    
+    lat, lon = (0.0, 0.0)
+    if order.pickup_latitude: lat = order.pickup_latitude
+    if order.pickup_longitude: lon = order.pickup_longitude
+
+    return OrderResponse(
+        id=order.id,
+        user_id=order.user_id,
+        item_name=order.item_name,
+        length_cm=order.length_cm,
+        width_cm=order.width_cm,
+        height_cm=order.height_cm,
+        weight_kg=order.weight_kg,
+        volume_m3=order.volume_m3,
+        status=order.status,
+        assigned_vehicle_id=order.assigned_vehicle_id,
+        assigned_vehicle_number=driver_vehicle.vehicle_number,
+        driver_confirmed_delivery=order.driver_confirmed_delivery,
+        user_confirmed_delivery=order.user_confirmed_delivery,
+        pickup_latitude=lat,
+        pickup_longitude=lon,
+        pickup_address=order.pickup_address,
+        drop_latitude=order.drop_latitude,
+        drop_longitude=order.drop_longitude,
+        drop_address=order.drop_address,
+        latitude=lat,
+        longitude=lon
+    )
+
+@app.post("/orders/{order_id}/confirm-delivery", response_model=OrderResponse)
+async def confirm_delivery(
+    order_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Fetch Order
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalars().first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Check Status - Allow confirming if SHIPPED or already DELIVERED (idempotent for flags)
+    if order.status != models.OrderStatus.SHIPPED and order.status != models.OrderStatus.DELIVERED:
+         raise HTTPException(status_code=400, detail="Order must be shipped before confirming delivery")
+
+    # Authorize & Update Flags
+    updated = False
+    vehicle_number = None
+
+    if current_user.role == models.UserRole.DRIVER:
+        # Check assignment
+        v_res = await db.execute(select(Vehicle).where(Vehicle.driver_id == current_user.id))
+        driver_vehicle = v_res.scalars().first()
+        if not driver_vehicle or order.assigned_vehicle_id != driver_vehicle.id:
+             raise HTTPException(status_code=403, detail="Not authorized for this order")
+        
+        vehicle_number = driver_vehicle.vehicle_number
+        if not order.driver_confirmed_delivery:
+            order.driver_confirmed_delivery = True
+            updated = True
+
+    elif current_user.role == models.UserRole.MSME:
+        if order.user_id != current_user.id:
+             raise HTTPException(status_code=403, detail="Not authorized for this order")
+        
+        if not order.user_confirmed_delivery:
+            order.user_confirmed_delivery = True
+            updated = True
+            
+        # Helper to get vehicle number for response if we don't have it handy
+        if order.assigned_vehicle_id:
+             v_res = await db.execute(select(Vehicle).where(Vehicle.id == order.assigned_vehicle_id))
+             v = v_res.scalars().first()
+             if v: vehicle_number = v.vehicle_number
+
+    # Check for Dual Confirmation
+    if order.driver_confirmed_delivery and order.user_confirmed_delivery:
+        order.status = models.OrderStatus.DELIVERED
+        updated = True
+
+    if updated:
+        await db.commit()
+        await db.refresh(order)
+
+    lat, lon = (0.0, 0.0)
+    if order.pickup_latitude: lat = order.pickup_latitude
+    if order.pickup_longitude: lon = order.pickup_longitude
+
+    return OrderResponse(
+        id=order.id,
+        user_id=order.user_id,
+        item_name=order.item_name,
+        length_cm=order.length_cm,
+        width_cm=order.width_cm,
+        height_cm=order.height_cm,
+        weight_kg=order.weight_kg,
+        volume_m3=order.volume_m3,
+        status=order.status,
+        assigned_vehicle_id=order.assigned_vehicle_id,
+        assigned_vehicle_number=vehicle_number,
+        driver_confirmed_delivery=order.driver_confirmed_delivery,
+        user_confirmed_delivery=order.user_confirmed_delivery,
+        pickup_latitude=lat,
+        pickup_longitude=lon,
+        pickup_address=order.pickup_address,
+        drop_latitude=order.drop_latitude,
+        drop_longitude=order.drop_longitude,
+        drop_address=order.drop_address,
         latitude=lat,
         longitude=lon
     )
