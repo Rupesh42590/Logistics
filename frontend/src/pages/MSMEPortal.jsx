@@ -240,132 +240,106 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return d.toFixed(1) + " km";
 }
 
-// Extract Table to clean up main component - Redesigned with Ant Design
+// Refactored Shipment List - Card Layout
 function ShipmentTable({ orders, onViewRoute }) {
-    // Define columns for Ant Design Table
-    const columns = [
-        {
-            title: 'Order ID',
-            dataIndex: 'id',
-            key: 'id',
-            width: 90,
-            render: (id) => <span className="msme-order-id">#{id}</span>,
-        },
-        {
-            title: 'Item Name',
-            dataIndex: 'item_name',
-            key: 'item_name',
-            width: 130,
-            ellipsis: true,
-            render: (name) => <span className="msme-item-name">{name || 'N/A'}</span>,
-        },
-        {
-            title: 'Route / Path',
-            key: 'route',
-            width: 320,
-            render: (_, order) => (
-                <div className="msme-route-cell">
-                    {/* Pickup */}
-                    <div className="msme-route-point">
-                        <div className="msme-route-dot msme-route-dot-pickup"></div>
-                        <div className="msme-route-info">
-                            <div className="msme-route-label msme-route-label-pickup">Pickup</div>
-                            <div className="msme-route-address" title={order.pickup_address || order.pickup_location || `${order.latitude?.toFixed(4)}, ${order.longitude?.toFixed(4)}`}>
-                                {order.pickup_address || order.pickup_location || `${order.latitude?.toFixed(4)}, ${order.longitude?.toFixed(4)}`}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* Connector */}
-                    <div className="msme-route-connector">
-                        <div className="msme-route-line"></div>
-                        {order.drop_latitude && (
-                            <span className="msme-route-distance">
-                                {calculateDistance(order.latitude, order.longitude, order.drop_latitude, order.drop_longitude)}
-                            </span>
-                        )}
-                    </div>
-                    
-                    {/* Drop */}
-                    <div className="msme-route-point">
-                        <div className="msme-route-dot msme-route-dot-drop"></div>
-                        <div className="msme-route-info">
-                            <div className="msme-route-label msme-route-label-drop">Drop</div>
-                            <div className="msme-route-address" title={order.drop_address || order.drop_location || (order.drop_latitude ? `${order.drop_latitude.toFixed(4)}, ${order.drop_longitude.toFixed(4)}` : 'Destination not set')}>
-                                {order.drop_address || order.drop_location ?
-                                    (order.drop_address || order.drop_location) :
-                                    (order.drop_latitude ? `${order.drop_latitude.toFixed(4)}, ${order.drop_longitude.toFixed(4)}` : 
-                                        <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Not set</span>)
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ),
-        },
-        {
-            title: 'Dimensions',
-            key: 'dimensions',
-            width: 110,
-            render: (_, order) => (
-                <div className="msme-dim-text">
-                    {order.length_cm}×{order.width_cm}×{order.height_cm} cm<br />
-                    <strong>{order.weight_kg} kg</strong>
-                </div>
-            ),
-        },
-        {
-            title: 'Volume',
-            dataIndex: 'volume_m3',
-            key: 'volume',
-            width: 100,
-            render: (vol) => <span className="msme-dim-text">{vol?.toFixed(4)} m³</span>,
-        },
-        {
-            title: 'Status',
-            dataIndex: 'status',
-            key: 'status',
-            width: 110,
-            render: (status) => {
-                const classMap = {
-                    'SHIPPED': 'msme-status-shipped',
-                    'DELIVERED': 'msme-status-delivered',
-                    'ASSIGNED': 'msme-status-assigned',
-                    'IN_TRANSIT': 'msme-status-in_transit',
-                    'PENDING': 'msme-status-pending',
-                    'CANCELLED': 'msme-status-cancelled',
-                };
-                return <span className={`msme-status-badge ${classMap[status] || 'msme-status-pending'}`}>{status}</span>;
-            },
-        },
-        {
-            title: 'Action',
-            key: 'action',
-            width: 110,
-            render: (_, order) => (
-                <Button
-                    icon={<CompassOutlined />}
-                    onClick={() => onViewRoute(order)}
-                    className="msme-action-btn"
-                >
-                    View
-                </Button>
-            ),
-        },
-    ];
+    if (!orders || orders.length === 0) {
+        return <Empty description="No orders found. Create your first shipment!" />;
+    }
 
     return (
-        <div className="msme-table-card">
-            <Table
-                columns={columns}
-                dataSource={orders}
-                rowKey="id"
-                pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `Total ${total} orders` }}
-                locale={{ emptyText: <Empty description="No orders found. Create your first shipment!" /> }}
-                scroll={{ x: 'max-content' }}
-            />
+        <div className="msme-orders-container">
+            {orders.map(order => (
+                <div key={order.id} className="msme-order-card">
+                    {/* Header: ID & Status */}
+                    <div className="msme-card-header">
+                        <div className="msme-card-id-group">
+                            <span className="msme-card-id">#{order.id}</span>
+                            <span className="msme-card-item">{order.item_name || 'N/A'}</span>
+                        </div>
+                        <StatusBadge status={order.status} />
+                    </div>
+
+                    {/* Body: Details & Locations */}
+                    <div className="msme-card-body">
+                        {/* Locations Column */}
+                        <div className="msme-details-section">
+                            {/* Pickup */}
+                            <div className="msme-location-box">
+                                <div className="msme-loc-header msme-loc-pickup">
+                                    <EnvironmentOutlined /> Pickup
+                                </div>
+                                {order.pickup_latitude && (
+                                    <span className="msme-coord-badge">
+                                        {order.pickup_latitude.toFixed(4)}, {order.pickup_longitude.toFixed(4)}
+                                    </span>
+                                )}
+                                <div className="msme-address-text">
+                                    {order.pickup_address || order.pickup_location || "Location not detailed"}
+                                </div>
+                            </div>
+
+                            {/* Drop */}
+                            <div className="msme-location-box">
+                                <div className="msme-loc-header msme-loc-drop">
+                                    <EnvironmentOutlined /> Drop
+                                </div>
+                                {order.drop_latitude && (
+                                    <span className="msme-coord-badge">
+                                        {order.drop_latitude.toFixed(4)}, {order.drop_longitude.toFixed(4)}
+                                    </span>
+                                )}
+                                <div className="msme-address-text">
+                                    {order.drop_address || order.drop_location || "Location not detailed"}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Meta & Actions Column */}
+                        <div className="msme-meta-section">
+                            <div className="msme-meta-group">
+                                <span className="msme-meta-label">Dimensions</span>
+                                <span className="msme-meta-value">
+                                    {order.length_cm} × {order.width_cm} × {order.height_cm} cm
+                                </span>
+                            </div>
+
+                            <div className="msme-meta-group">
+                                <span className="msme-meta-label">Weight</span>
+                                <span className="msme-meta-value">{order.weight_kg} kg</span>
+                            </div>
+
+                             <div className="msme-meta-group">
+                                <span className="msme-meta-label">Volume</span>
+                                <span className="msme-meta-value">{order.volume_m3?.toFixed(4)} m³</span>
+                            </div>
+
+                            <div className="msme-actions">
+                                <Button
+                                    icon={<CompassOutlined />}
+                                    onClick={() => onViewRoute(order)}
+                                    className="msme-action-btn"
+                                >
+                                    View Route
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ))}
         </div>
     );
+}
+
+function StatusBadge({ status }) {
+    const classMap = {
+        'SHIPPED': 'msme-status-shipped',
+        'DELIVERED': 'msme-status-delivered',
+        'ASSIGNED': 'msme-status-assigned',
+        'IN_TRANSIT': 'msme-status-in_transit',
+        'PENDING': 'msme-status-pending',
+        'CANCELLED': 'msme-status-cancelled',
+    };
+    return <span className={`msme-status-badge ${classMap[status] || 'msme-status-pending'}`}>{status}</span>;
 }
 
 function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {

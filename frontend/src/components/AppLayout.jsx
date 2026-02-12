@@ -19,14 +19,18 @@ export default function AppLayout({ children }) {
   const links = user?.role === 'SUPER_ADMIN'
     ? [
       { label: 'Fleet Monitor', path: '/admin' },
-      { label: 'Zone Manager', path: '/admin/zones' }, // We might need to handle sub-routing or keep query params
+      { label: 'Zone Manager', path: '/admin/zones' },
       { label: 'Settings', path: '/admin/settings' },
     ]
-    : [
-      { label: 'Dashboard', path: '/msme' },
-      { label: 'Listed Companies', path: '/msme/addresses' },
-      { label: 'Settings', path: '/msme/settings' },
-    ];
+    : user?.role === 'DRIVER'
+      ? [
+        { label: 'Dashboard', path: '/driver' },
+      ]
+      : [
+        { label: 'Dashboard', path: '/msme' },
+        { label: 'Listed Companies', path: '/msme/addresses' },
+        { label: 'Settings', path: '/msme/settings' },
+      ];
 
   // Or we can fully move tabs to routes later. For this step, let's just make the sidebar look good.
 

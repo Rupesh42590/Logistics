@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import './AdminDashboard.css'; 
+import './DriverDashboard.css'; 
 
 export default function DriverDashboard() {
     const { token, user } = useAuth();
@@ -59,25 +59,21 @@ export default function DriverDashboard() {
     const assignedOrders = orders.filter(o => o.status === 'ASSIGNED').length;
 
     return (
-        <div>
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ maxWidth: '60%' }}>
-                    <h1 className="page-title">Driver Dashboard</h1>
-                    <p className="page-subtitle" style={{ 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis', 
-                        whiteSpace: 'nowrap',
-                        maxWidth: '100%',
-                        display: 'block'
-                    }}>
-                        Welcome back, {user?.name || 'Driver'} ({user?.email || (user?.employee_id ? `${user.employee_id}@logisoft.driver` : '')})
-                    </p>
-                </div>
-                <div>
-                     <button 
+        <div className="driver-dashboard-container">
+            <div className="driver-header">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h1 className="driver-title">Driver Dashboard</h1>
+                        <p className="driver-subtitle">
+                           Welcome back, <span style={{fontWeight: 600, color: '#0f172a'}}>{user?.name || 'Driver'}</span>
+                           <br/>
+                           <span style={{fontSize: '0.85rem'}}>{user?.email || (user?.employee_id ? `ID: ${user.employee_id}` : '')}</span>
+                        </p>
+                    </div>
+                    <button 
                         className="btn btn-secondary" 
                         onClick={() => setIsPasswordModalOpen(true)}
-                        style={{ fontSize: '0.875rem' }}
+                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
                     >
                         Change Password
                     </button>
@@ -85,114 +81,145 @@ export default function DriverDashboard() {
             </div>
 
             {/* Stats */}
-            <div className="stats-grid">
-               <div className="card stat-card">
-                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Assigned Orders</div>
-                   <div className="stat-value">{assignedOrders}</div>
+            <div className="driver-stats-grid">
+               <div className="driver-stat-card">
+                   <div className="driver-stat-label">Assigned Orders</div>
+                   <div className="driver-stat-value">{assignedOrders}</div>
                </div>
-               <div className="card stat-card">
-                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Completed (Shipped)</div>
-                   <div className="stat-value">{completedOrders}</div>
+               <div className="driver-stat-card">
+                   <div className="driver-stat-label">Completed Orders</div>
+                   <div className="driver-stat-value">{completedOrders}</div>
                </div>
-               <div className="card stat-card">
-                   <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Total History</div>
-                   <div className="stat-value">{orders.length}</div>
+               <div className="driver-stat-card">
+                   <div className="driver-stat-label">Total History</div>
+                   <div className="driver-stat-value">{orders.length}</div>
                </div>
             </div>
 
-            {/* Orders Table */}
-            <div className="card table-wrapper" style={{ marginTop: '1.5rem' }}>
-                <h3 style={{ padding: '1rem', borderBottom: '1px solid var(--border)', fontWeight: '600' }}>My Assignments</h3>
-                <table className="data-table">
-                    <thead className="table-head">
-                        <tr>
-                            <th className="table-th">Order ID</th>
-                            <th className="table-th">Item</th>
-                            <th className="table-th">Details</th>
-                            <th className="table-th">Pickup Details</th>
-                            <th className="table-th">Drop Details</th>
-                            <th className="table-th">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            {/* Orders List */}
+            <div className="orders-section">
+                <h3 className="orders-section-title">My Assignments</h3>
+                
+                {orders.length === 0 ? (
+                    <div className="empty-state">
+                        <p>No assigned orders found.</p>
+                    </div>
+                ) : (
+                    <div className="orders-list">
                         {orders.map(o => (
-                            <tr key={o.id} className="table-td">
-                                <td style={{ padding: '1rem', fontWeight: '500' }}>#{o.id}</td>
-                                <td style={{ padding: '1rem' }}>{o.item_name}</td>
-                                <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                                    {o.weight_kg}kg • {o.volume_m3 < 0.001 ? o.volume_m3.toFixed(6) : o.volume_m3.toFixed(3)}m³
-                                </td>
-                                <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
-                                    <div><strong>Co-ords:</strong> {(o.pickup_latitude || o.latitude).toFixed(4)}, {(o.pickup_longitude || o.longitude).toFixed(4)}</div>
-                                    {o.pickup_address && <div style={{fontSize: '0.8rem', marginTop: '0.25rem', color: '#64748b'}}>{o.pickup_address}</div>}
-                                </td>
-                                <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
-                                    {o.drop_latitude ? (
-                                        <>
-                                            <div><strong>Co-ords:</strong> {o.drop_latitude.toFixed(4)}, {o.drop_longitude.toFixed(4)}</div>
-                                            {o.drop_address && <div style={{fontSize: '0.8rem', marginTop: '0.25rem', color: '#64748b'}}>{o.drop_address}</div>}
-                                        </>
-                                    ) : <span style={{color:'#94a3b8'}}>-</span>}
-                                </td>
-                                <td style={{ padding: '1rem' }}>
-                                    <span className={`badge ${
-                                        o.status === 'SHIPPED' ? 'badge-success' : 'badge-warning'}`}>
+                            <div key={o.id} className="order-card">
+                                <div className="order-header">
+                                    <div className="item-info">
+                                        <span className="order-id">#{o.id}</span>
+                                        <div className="item-name">{o.item_name}</div>
+                                        <div className="item-specs">
+                                            {o.weight_kg}kg • {o.volume_m3 < 0.001 ? o.volume_m3.toFixed(6) : o.volume_m3.toFixed(3)}m³
+                                        </div>
+                                    </div>
+                                    <span className={`order-status status-${o.status.toLowerCase()}`}>
                                         {o.status}
                                     </span>
-                                </td>
-                            </tr>
+                                </div>
+                                
+                                <div className="order-details-grid">
+                                    {/* Pickup */}
+                                    <div className="location-box">
+                                        <div className="location-header" style={{ color: '#2563eb' }}>
+                                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                            </svg>
+                                            Pickup
+                                        </div>
+                                        <div className="coord-badge">
+                                            {(o.pickup_latitude || o.latitude).toFixed(4)}, {(o.pickup_longitude || o.longitude).toFixed(4)}
+                                        </div>
+                                        {o.pickup_address ? (
+                                             <div className="address-text">{o.pickup_address}</div>
+                                        ) : (
+                                            <div className="address-text" style={{color: '#94a3b8', fontStyle: 'italic'}}>No address provided</div>
+                                        )}
+                                    </div>
+
+                                    {/* Drop */}
+                                    <div className="location-box">
+                                        <div className="location-header" style={{ color: '#16a34a' }}>
+                                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                            </svg>
+                                            Drop
+                                        </div>
+                                        {o.drop_latitude ? (
+                                            <>
+                                                <div className="coord-badge">
+                                                    {o.drop_latitude.toFixed(4)}, {o.drop_longitude.toFixed(4)}
+                                                </div>
+                                                {o.drop_address ? (
+                                                    <div className="address-text">{o.drop_address}</div>
+                                                ) : (
+                                                    <div className="address-text" style={{color: '#94a3b8', fontStyle: 'italic'}}>No address provided</div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div style={{ color: '#94a3b8', fontSize: '0.9rem', padding: '0.5rem 0' }}>Not specified</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         ))}
-                        {orders.length === 0 && (
-                            <tr><td colSpan="5" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No assigned orders.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+                    </div>
+                )}
             </div>
 
-            {/* Password Change Modal */}
+            {/* Password Change Modal - Keeping basic styles but wrapping in div for isolation if needed */}
             {isPasswordModalOpen && (
                 <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '400px' }}>
-                        <div className="modal-header">
-                            <h3 className="modal-title">Change Password</h3>
-                            <button onClick={() => setIsPasswordModalOpen(false)} className="modal-close-btn">&times;</button>
+                    <div className="modal-content" style={{ maxWidth: '400px', backgroundColor: 'white', padding: '2rem', borderRadius: '1rem' }}>
+                        <div className="modal-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem'}}>
+                            <h3 className="modal-title" style={{fontSize: '1.25rem', fontWeight: 600}}>Change Password</h3>
+                            <button onClick={() => setIsPasswordModalOpen(false)} className="modal-close-btn" style={{background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer'}}>&times;</button>
                         </div>
-                        <div style={{ padding: '1.5rem' }}>
+                        <div>
                             {passwordMessage.text && (
                                 <div className={`alert ${passwordMessage.type === 'error' ? 'alert-error' : 'alert-success'}`} style={{ marginBottom: '1rem', padding: '0.75rem', borderRadius: '0.375rem', fontSize: '0.875rem', backgroundColor: passwordMessage.type === 'error' ? '#fee2e2' : '#dcfce7', color: passwordMessage.type === 'error' ? '#dc2626' : '#16a34a' }}>
                                     {passwordMessage.text}
                                 </div>
                             )}
-                            <div className="form-group">
-                                <label className="form-label">Current Password</label>
+                            <div className="form-group" style={{marginBottom: '1rem'}}>
+                                <label className="form-label" style={{display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500}}>Current Password</label>
                                 <input 
                                     type="password" 
                                     className="form-input"
+                                    style={{width: '100%', padding: '0.625rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0'}}
                                     value={passwordForm.oldPassword}
                                     onChange={(e) => setPasswordForm({...passwordForm, oldPassword: e.target.value})}
+                                    placeholder="Enter current password"
                                 />
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">New Password</label>
+                            <div className="form-group" style={{marginBottom: '1rem'}}>
+                                <label className="form-label" style={{display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500}}>New Password</label>
                                 <input 
                                     type="password" 
                                     className="form-input"
+                                    style={{width: '100%', padding: '0.625rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0'}}
                                     value={passwordForm.newPassword}
                                     onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                                    placeholder="Enter new password"
                                 />
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">Confirm New Password</label>
+                            <div className="form-group" style={{marginBottom: '1.5rem'}}>
+                                <label className="form-label" style={{display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500}}>Confirm New Password</label>
                                 <input 
                                     type="password" 
                                     className="form-input"
+                                    style={{width: '100%', padding: '0.625rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0'}}
                                     value={passwordForm.confirmPassword}
                                     onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                                    placeholder="Confirm new password"
                                 />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                                <button onClick={() => setIsPasswordModalOpen(false)} className="btn btn-secondary">Cancel</button>
-                                <button onClick={handlePasswordChange} className="btn btn-primary">Update Password</button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                                <button onClick={() => setIsPasswordModalOpen(false)} className="btn" style={{padding: '0.5rem 1rem', background: '#f1f5f9', border: 'none', borderRadius: '0.375rem', cursor: 'pointer'}}>Cancel</button>
+                                <button onClick={handlePasswordChange} className="btn btn-primary" style={{padding: '0.5rem 1rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer'}}>Update Password</button>
                             </div>
                         </div>
                     </div>

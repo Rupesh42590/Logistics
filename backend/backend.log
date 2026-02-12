@@ -1,128 +1,153 @@
 INFO:     Will watch for changes in these directories: ['/Users/rupeshmalisetty/Documents/Logistics/backend']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [21184] using StatReload
-INFO:     Started server process [21396]
+INFO:     Started reloader process [21489] using StatReload
+INFO:     Started server process [21546]
 INFO:     Waiting for application startup.
-2026-01-30 16:56:41,137 INFO sqlalchemy.engine.Engine select pg_catalog.version()
-2026-01-30 16:56:41,137 INFO sqlalchemy.engine.Engine [raw sql] ()
-2026-01-30 16:56:41,138 INFO sqlalchemy.engine.Engine select current_schema()
-2026-01-30 16:56:41,138 INFO sqlalchemy.engine.Engine [raw sql] ()
-2026-01-30 16:56:41,138 INFO sqlalchemy.engine.Engine show standard_conforming_strings
-2026-01-30 16:56:41,138 INFO sqlalchemy.engine.Engine [raw sql] ()
-2026-01-30 16:56:41,139 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 16:56:41,141 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+2026-02-12 14:07:50,276 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-02-12 14:07:50,276 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-02-12 14:07:50,277 INFO sqlalchemy.engine.Engine select current_schema()
+2026-02-12 14:07:50,278 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-02-12 14:07:50,279 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-02-12 14:07:50,279 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-02-12 14:07:50,279 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:07:50,285 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
 FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
 WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
-2026-01-30 16:56:41,141 INFO sqlalchemy.engine.Engine [generated in 0.00008s] ('companies', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
-2026-01-30 16:56:41,144 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+2026-02-12 14:07:50,285 INFO sqlalchemy.engine.Engine [generated in 0.00025s] ('companies', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-02-12 14:07:50,288 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
 FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
 WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
-2026-01-30 16:56:41,144 INFO sqlalchemy.engine.Engine [cached since 0.003411s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
-2026-01-30 16:56:41,144 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+2026-02-12 14:07:50,288 INFO sqlalchemy.engine.Engine [cached since 0.003185s ago] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-02-12 14:07:50,289 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
 FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
 WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
-2026-01-30 16:56:41,144 INFO sqlalchemy.engine.Engine [cached since 0.003928s ago] ('zones', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
-2026-01-30 16:56:41,145 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+2026-02-12 14:07:50,289 INFO sqlalchemy.engine.Engine [cached since 0.00398s ago] ('zones', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-02-12 14:07:50,290 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
 FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
 WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
-2026-01-30 16:56:41,145 INFO sqlalchemy.engine.Engine [cached since 0.004292s ago] ('vehicles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
-2026-01-30 16:56:41,145 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+2026-02-12 14:07:50,290 INFO sqlalchemy.engine.Engine [cached since 0.004889s ago] ('vehicles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-02-12 14:07:50,290 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
 FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
 WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
-2026-01-30 16:56:41,145 INFO sqlalchemy.engine.Engine [cached since 0.004675s ago] ('orders', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
-2026-01-30 16:56:41,146 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+2026-02-12 14:07:50,290 INFO sqlalchemy.engine.Engine [cached since 0.005378s ago] ('orders', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-02-12 14:07:50,291 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-02-12 14:07:50,291 INFO sqlalchemy.engine.Engine [cached since 0.005843s ago] ('addresses', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-02-12 14:07:50,294 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
 FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
 WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
-2026-01-30 16:56:41,146 INFO sqlalchemy.engine.Engine [generated in 0.00007s] ('userrole', 'pg_catalog')
-2026-01-30 16:56:41,147 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
+2026-02-12 14:07:50,294 INFO sqlalchemy.engine.Engine [generated in 0.00014s] ('userrole', 'pg_catalog')
+2026-02-12 14:07:50,295 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_type.typname 
 FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
 WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
-2026-01-30 16:56:41,147 INFO sqlalchemy.engine.Engine [cached since 0.001472s ago] ('orderstatus', 'pg_catalog')
-2026-01-30 16:56:41,148 INFO sqlalchemy.engine.Engine COMMIT
+2026-02-12 14:07:50,295 INFO sqlalchemy.engine.Engine [cached since 0.00157s ago] ('orderstatus', 'pg_catalog')
+2026-02-12 14:07:50,296 INFO sqlalchemy.engine.Engine COMMIT
 INFO:     Application startup complete.
-INFO:     127.0.0.1:57418 - "HEAD /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57478 - "GET /docs HTTP/1.1" 200 OK
-/Users/rupeshmalisetty/Documents/Logistics/backend/venv/lib/python3.13/site-packages/fastapi/openapi/utils.py:251: UserWarning: Duplicate Operation ID create_order_orders_post for function create_order at /Users/rupeshmalisetty/Documents/Logistics/backend/main.py
-  warnings.warn(message, stacklevel=1)
-/Users/rupeshmalisetty/Documents/Logistics/backend/venv/lib/python3.13/site-packages/fastapi/openapi/utils.py:251: UserWarning: Duplicate Operation ID cancel_order_orders__order_id__cancel_post for function cancel_order at /Users/rupeshmalisetty/Documents/Logistics/backend/main.py
-  warnings.warn(message, stacklevel=1)
-INFO:     127.0.0.1:57478 - "GET /openapi.json HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57612 - "OPTIONS /users/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57612 - "GET /users/me HTTP/1.1" 401 Unauthorized
-2026-01-30 17:10:22,146 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 17:10:22,161 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+2026-02-12 14:08:58,401 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:08:58,410 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
 FROM users 
 WHERE users.email = $1::VARCHAR
-2026-01-30 17:10:22,161 INFO sqlalchemy.engine.Engine [generated in 0.00024s] ('admin@example.com',)
-INFO:     127.0.0.1:57616 - "POST /token HTTP/1.1" 200 OK
-2026-01-30 17:10:22,433 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-01-30 17:10:22,439 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 17:10:22,440 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+2026-02-12 14:08:58,411 INFO sqlalchemy.engine.Engine [generated in 0.00018s] ('mrupesh2005@gmail.com',)
+INFO:     127.0.0.1:49980 - "POST /token HTTP/1.1" 200 OK
+2026-02-12 14:08:58,687 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49980 - "OPTIONS /users/me HTTP/1.1" 200 OK
+2026-02-12 14:08:58,693 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:08:58,694 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
 FROM users 
 WHERE users.email = $1::VARCHAR
-2026-01-30 17:10:22,440 INFO sqlalchemy.engine.Engine [generated in 0.00007s] ('admin@example.com',)
-INFO:     127.0.0.1:57616 - "GET /users/me HTTP/1.1" 200 OK
-2026-01-30 17:10:22,444 INFO sqlalchemy.engine.Engine ROLLBACK
-INFO:     127.0.0.1:57616 - "OPTIONS /vehicles HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57617 - "OPTIONS /orders HTTP/1.1" 200 OK
-2026-01-30 17:10:22,468 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 17:10:22,469 INFO sqlalchemy.engine.Engine SELECT vehicles.id, vehicles.vehicle_number, vehicles.max_volume_m3, vehicles.max_weight_kg, vehicles.zone_id, vehicles.driver_id 
-FROM vehicles
-2026-01-30 17:10:22,469 INFO sqlalchemy.engine.Engine [generated in 0.00011s] ()
-INFO:     127.0.0.1:57618 - "OPTIONS /zones HTTP/1.1" 200 OK
-INFO:     127.0.0.1:57619 - "OPTIONS /drivers HTTP/1.1" 200 OK
-2026-01-30 17:10:22,475 INFO sqlalchemy.engine.Engine SELECT zones.id AS zones_id, zones.name AS zones_name, zones.geometry_coords AS zones_geometry_coords 
-FROM zones 
-WHERE zones.id IN ($1::INTEGER)
-2026-01-30 17:10:22,475 INFO sqlalchemy.engine.Engine [generated in 0.00012s] (8,)
-2026-01-30 17:10:22,517 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 17:10:22,518 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+2026-02-12 14:08:58,694 INFO sqlalchemy.engine.Engine [generated in 0.00007s] ('mrupesh2005@gmail.com',)
+2026-02-12 14:08:58,696 INFO sqlalchemy.engine.Engine SELECT companies.id AS companies_id, companies.name AS companies_name, companies.gst_number AS companies_gst_number, companies.address AS companies_address 
+FROM companies 
+WHERE companies.id IN ($1::INTEGER)
+2026-02-12 14:08:58,696 INFO sqlalchemy.engine.Engine [generated in 0.00008s] (1,)
+INFO:     127.0.0.1:49980 - "GET /users/me HTTP/1.1" 200 OK
+2026-02-12 14:08:58,700 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-12 14:08:58,701 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:08:58,701 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
 FROM users 
 WHERE users.email = $1::VARCHAR
-2026-01-30 17:10:22,518 INFO sqlalchemy.engine.Engine [cached since 0.07781s ago] ('admin@example.com',)
-2026-01-30 17:10:22,518 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 17:10:22,518 INFO sqlalchemy.engine.Engine SELECT zones.id, zones.name, zones.geometry_coords 
-FROM zones
-2026-01-30 17:10:22,518 INFO sqlalchemy.engine.Engine [generated in 0.00005s] ()
-INFO:     127.0.0.1:57616 - "GET /vehicles HTTP/1.1" 200 OK
-2026-01-30 17:10:22,519 INFO sqlalchemy.engine.Engine ROLLBACK
-INFO:     127.0.0.1:57618 - "GET /zones HTTP/1.1" 200 OK
-2026-01-30 17:10:22,520 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-01-30 17:10:22,520 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-01-30 17:10:22,520 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+2026-02-12 14:08:58,701 INFO sqlalchemy.engine.Engine [cached since 0.006787s ago] ('mrupesh2005@gmail.com',)
+2026-02-12 14:08:58,702 INFO sqlalchemy.engine.Engine SELECT companies.id AS companies_id, companies.name AS companies_name, companies.gst_number AS companies_gst_number, companies.address AS companies_address 
+FROM companies 
+WHERE companies.id IN ($1::INTEGER)
+2026-02-12 14:08:58,702 INFO sqlalchemy.engine.Engine [cached since 0.006162s ago] (1,)
+INFO:     127.0.0.1:49980 - "GET /users/me HTTP/1.1" 200 OK
+2026-02-12 14:08:58,702 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49980 - "OPTIONS /orders HTTP/1.1" 200 OK
+2026-02-12 14:08:58,749 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:08:58,750 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
 FROM users 
 WHERE users.email = $1::VARCHAR
-2026-01-30 17:10:22,520 INFO sqlalchemy.engine.Engine [cached since 0.0804s ago] ('admin@example.com',)
-2026-01-30 17:10:22,534 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+2026-02-12 14:08:58,750 INFO sqlalchemy.engine.Engine [cached since 0.05548s ago] ('mrupesh2005@gmail.com',)
+2026-02-12 14:08:58,751 INFO sqlalchemy.engine.Engine SELECT companies.id AS companies_id, companies.name AS companies_name, companies.gst_number AS companies_gst_number, companies.address AS companies_address 
+FROM companies 
+WHERE companies.id IN ($1::INTEGER)
+2026-02-12 14:08:58,751 INFO sqlalchemy.engine.Engine [cached since 0.05516s ago] (1,)
+2026-02-12 14:08:58,753 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.user_id, orders.item_name, orders.status, orders.length_cm, orders.width_cm, orders.height_cm, orders.weight_kg, orders.volume_m3, orders.pickup_latitude, orders.pickup_longitude, orders.pickup_address, orders.drop_latitude, orders.drop_longitude, orders.drop_address, orders.pickup_location, orders.assigned_vehicle_id, vehicles.id AS id_1, vehicles.vehicle_number, vehicles.max_volume_m3, vehicles.max_weight_kg, vehicles.zone_id, vehicles.driver_id 
+FROM orders LEFT OUTER JOIN vehicles ON orders.assigned_vehicle_id = vehicles.id 
+WHERE orders.user_id = $1::INTEGER ORDER BY orders.id DESC
+2026-02-12 14:08:58,753 INFO sqlalchemy.engine.Engine [generated in 0.00008s] (2,)
+INFO:     127.0.0.1:49980 - "GET /orders HTTP/1.1" 200 OK
+2026-02-12 14:08:58,759 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-12 14:08:58,779 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:08:58,780 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
 FROM users 
-WHERE users.role = $1::userrole
-2026-01-30 17:10:22,534 INFO sqlalchemy.engine.Engine [generated in 0.00009s] ('DRIVER',)
-2026-01-30 17:10:22,536 INFO sqlalchemy.engine.Engine SELECT vehicles.driver_id AS vehicles_driver_id, vehicles.id AS vehicles_id, vehicles.vehicle_number AS vehicles_vehicle_number, vehicles.max_volume_m3 AS vehicles_max_volume_m3, vehicles.max_weight_kg AS vehicles_max_weight_kg, vehicles.zone_id AS vehicles_zone_id 
-FROM vehicles 
-WHERE vehicles.driver_id IN ($1::INTEGER)
-2026-01-30 17:10:22,536 INFO sqlalchemy.engine.Engine [generated in 0.00009s] (15,)
-INFO:     127.0.0.1:57619 - "GET /drivers HTTP/1.1" 200 OK
-2026-01-30 17:10:22,537 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-01-30 17:10:22,541 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.user_id, orders.item_name, orders.status, orders.length_cm, orders.width_cm, orders.height_cm, orders.weight_kg, orders.volume_m3, orders.pickup_location, orders.assigned_vehicle_id, vehicles.id AS id_1, vehicles.vehicle_number, vehicles.max_volume_m3, vehicles.max_weight_kg, vehicles.zone_id, vehicles.driver_id 
-FROM orders LEFT OUTER JOIN vehicles ON orders.assigned_vehicle_id = vehicles.id ORDER BY orders.id DESC
-2026-01-30 17:10:22,542 INFO sqlalchemy.engine.Engine [generated in 0.00006s] ()
-INFO:     127.0.0.1:57617 - "GET /orders HTTP/1.1" 200 OK
-2026-01-30 17:10:22,547 INFO sqlalchemy.engine.Engine ROLLBACK
-WARNING:  StatReload detected changes in 'schemas.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [21396]
-Fatal Python error: init_sys_streams: can't initialize sys standard streams
-Python runtime state: core initialized
-OSError: [Errno 9] Bad file descriptor
-
-Current thread 0x00000001fcf320c0 (most recent call first):
-  <no Python frame>
-WARNING:  StatReload detected changes in 'main.py'. Reloading...
-Fatal Python error: init_sys_streams: can't initialize sys standard streams
-Python runtime state: core initialized
-OSError: [Errno 9] Bad file descriptor
-
-Current thread 0x00000001fcf320c0 (most recent call first):
-  <no Python frame>
+WHERE users.email = $1::VARCHAR
+2026-02-12 14:08:58,780 INFO sqlalchemy.engine.Engine [cached since 0.08543s ago] ('mrupesh2005@gmail.com',)
+2026-02-12 14:08:58,793 INFO sqlalchemy.engine.Engine SELECT companies.id AS companies_id, companies.name AS companies_name, companies.gst_number AS companies_gst_number, companies.address AS companies_address 
+FROM companies 
+WHERE companies.id IN ($1::INTEGER)
+2026-02-12 14:08:58,793 INFO sqlalchemy.engine.Engine [cached since 0.09728s ago] (1,)
+2026-02-12 14:08:58,797 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.user_id, orders.item_name, orders.status, orders.length_cm, orders.width_cm, orders.height_cm, orders.weight_kg, orders.volume_m3, orders.pickup_latitude, orders.pickup_longitude, orders.pickup_address, orders.drop_latitude, orders.drop_longitude, orders.drop_address, orders.pickup_location, orders.assigned_vehicle_id, vehicles.id AS id_1, vehicles.vehicle_number, vehicles.max_volume_m3, vehicles.max_weight_kg, vehicles.zone_id, vehicles.driver_id 
+FROM orders LEFT OUTER JOIN vehicles ON orders.assigned_vehicle_id = vehicles.id 
+WHERE orders.user_id = $1::INTEGER ORDER BY orders.id DESC
+2026-02-12 14:08:58,797 INFO sqlalchemy.engine.Engine [cached since 0.04498s ago] (2,)
+INFO:     127.0.0.1:49981 - "GET /orders HTTP/1.1" 200 OK
+2026-02-12 14:08:58,804 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49991 - "OPTIONS /driver/login HTTP/1.1" 200 OK
+2026-02-12 14:09:22,079 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:09:22,080 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+FROM users 
+WHERE users.employee_id = $1::VARCHAR
+2026-02-12 14:09:22,080 INFO sqlalchemy.engine.Engine [generated in 0.00021s] ('12342',)
+INFO:     127.0.0.1:49991 - "POST /driver/login HTTP/1.1" 200 OK
+2026-02-12 14:09:22,338 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-12 14:09:22,343 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:09:22,343 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+FROM users 
+WHERE users.email = $1::VARCHAR
+2026-02-12 14:09:22,343 INFO sqlalchemy.engine.Engine [cached since 23.65s ago] ('driver_f72a831726e3409d92b210b8dc827829@logisoft.driver',)
+INFO:     127.0.0.1:49991 - "GET /users/me HTTP/1.1" 200 OK
+2026-02-12 14:09:22,344 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-12 14:09:22,347 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:09:22,347 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+FROM users 
+WHERE users.email = $1::VARCHAR
+2026-02-12 14:09:22,347 INFO sqlalchemy.engine.Engine [cached since 23.65s ago] ('driver_f72a831726e3409d92b210b8dc827829@logisoft.driver',)
+INFO:     127.0.0.1:49991 - "GET /users/me HTTP/1.1" 200 OK
+2026-02-12 14:09:22,348 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49991 - "OPTIONS /driver/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49992 - "OPTIONS /driver/orders HTTP/1.1" 200 OK
+2026-02-12 14:09:22,357 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:09:22,357 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+FROM users 
+WHERE users.email = $1::VARCHAR
+2026-02-12 14:09:22,358 INFO sqlalchemy.engine.Engine [cached since 23.66s ago] ('driver_f72a831726e3409d92b210b8dc827829@logisoft.driver',)
+2026-02-12 14:09:22,359 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.user_id, orders.item_name, orders.status, orders.length_cm, orders.width_cm, orders.height_cm, orders.weight_kg, orders.volume_m3, orders.pickup_latitude, orders.pickup_longitude, orders.pickup_address, orders.drop_latitude, orders.drop_longitude, orders.drop_address, orders.pickup_location, orders.assigned_vehicle_id, vehicles.id AS id_1, vehicles.vehicle_number, vehicles.max_volume_m3, vehicles.max_weight_kg, vehicles.zone_id, vehicles.driver_id 
+FROM orders LEFT OUTER JOIN vehicles ON orders.assigned_vehicle_id = vehicles.id 
+WHERE vehicles.driver_id = $1::INTEGER
+2026-02-12 14:09:22,359 INFO sqlalchemy.engine.Engine [generated in 0.00009s] (3,)
+INFO:     127.0.0.1:49991 - "GET /driver/orders HTTP/1.1" 200 OK
+2026-02-12 14:09:22,360 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-02-12 14:09:22,361 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-02-12 14:09:22,361 INFO sqlalchemy.engine.Engine SELECT users.id, users.email, users.name, users.hashed_password, users.role, users.company_id, users.employee_id 
+FROM users 
+WHERE users.email = $1::VARCHAR
+2026-02-12 14:09:22,361 INFO sqlalchemy.engine.Engine [cached since 23.67s ago] ('driver_f72a831726e3409d92b210b8dc827829@logisoft.driver',)
+2026-02-12 14:09:22,362 INFO sqlalchemy.engine.Engine SELECT orders.id, orders.user_id, orders.item_name, orders.status, orders.length_cm, orders.width_cm, orders.height_cm, orders.weight_kg, orders.volume_m3, orders.pickup_latitude, orders.pickup_longitude, orders.pickup_address, orders.drop_latitude, orders.drop_longitude, orders.drop_address, orders.pickup_location, orders.assigned_vehicle_id, vehicles.id AS id_1, vehicles.vehicle_number, vehicles.max_volume_m3, vehicles.max_weight_kg, vehicles.zone_id, vehicles.driver_id 
+FROM orders LEFT OUTER JOIN vehicles ON orders.assigned_vehicle_id = vehicles.id 
+WHERE vehicles.driver_id = $1::INTEGER
+2026-02-12 14:09:22,362 INFO sqlalchemy.engine.Engine [cached since 0.002925s ago] (3,)
+INFO:     127.0.0.1:49992 - "GET /driver/orders HTTP/1.1" 200 OK
+2026-02-12 14:09:22,363 INFO sqlalchemy.engine.Engine ROLLBACK
