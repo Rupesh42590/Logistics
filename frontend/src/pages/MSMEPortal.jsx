@@ -16,6 +16,15 @@ export default function MSMEPortal() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showNewShipmentModal, setShowNewShipmentModal] = useState(false);
+    const [viewMode, setViewMode] = useState('active'); // 'active' | 'history'
+    const [historyFilter, setHistoryFilter] = useState('ALL'); // 'ALL' | 'DELIVERED' | 'CANCELLED'
+
+    // Generic Modal State
+    const [notification, setNotification] = useState({ show: false, type: 'info', message: '' });
+    const [confirmation, setConfirmation] = useState({ show: false, title: '', message: '', onConfirm: null });
+
+    const closeNotification = () => setNotification({ ...notification, show: false });
+    const closeConfirmation = () => setConfirmation({ ...confirmation, show: false });
 
 
     const fetchOrders = async () => {
@@ -39,25 +48,41 @@ export default function MSMEPortal() {
     };
 
     const handleCancelOrder = async (order) => {
-        if(!confirm(`Are you sure you want to cancel Order #${order.id}?`)) return;
-        try {
-            await axios.post(`${API_BASE_URL}/orders/${order.id}/cancel`);
-            fetchOrders();
-        } catch (err) {
-             console.error("Cancel failed", err);
-             alert(err.response?.data?.detail || "Failed to cancel order");
-        }
+        setConfirmation({
+            show: true,
+            title: 'Cancel Order',
+            message: `Are you sure you want to cancel Order #${order.id}?`,
+            onConfirm: async () => {
+                try {
+                    await axios.post(`${API_BASE_URL}/orders/${order.id}/cancel`);
+                    fetchOrders();
+                    setNotification({ show: true, type: 'success', message: `Order #${order.id} cancelled successfully` });
+                } catch (err) {
+                     console.error("Cancel failed", err);
+                     setNotification({ show: true, type: 'error', message: err.response?.data?.detail || "Failed to cancel order" });
+                }
+                closeConfirmation();
+            }
+        });
     };
 
     const handleConfirmDelivery = async (order) => {
-        if(!confirm(`Confirm delivery for Order #${order.id}?`)) return;
-        try {
-             await axios.post(`${API_BASE_URL}/orders/${order.id}/confirm-delivery`);
-             fetchOrders();
-        } catch (err) {
-             console.error("Confirmation failed", err);
-             alert(err.response?.data?.detail || "Failed to confirm delivery");
-        }
+        setConfirmation({
+            show: true,
+            title: 'Confirm Delivery',
+            message: `Confirm delivery for Order #${order.id}?`,
+            onConfirm: async () => {
+                try {
+                     await axios.post(`${API_BASE_URL}/orders/${order.id}/confirm-delivery`);
+                     fetchOrders();
+                     setNotification({ show: true, type: 'success', message: `Order #${order.id} marked as delivered` });
+                } catch (err) {
+                     console.error("Confirmation failed", err);
+                     setNotification({ show: true, type: 'error', message: err.response?.data?.detail || "Failed to confirm delivery" });
+                }
+                closeConfirmation();
+            }
+        });
     };
 
     const [selectedOrderForRoute, setSelectedOrderForRoute] = useState(null);
@@ -131,11 +156,25 @@ export default function MSMEPortal() {
                 (order.drop_address || '').toLowerCase().includes(searchTerm.toLowerCase())
             );
 
-            const matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
+            // View Mode Filter
+            let matchesView = false;
+            if (viewMode === 'active') {
+                matchesView = !['DELIVERED', 'CANCELLED'].includes(order.status);
+            } else {
+                matchesView = ['DELIVERED', 'CANCELLED'].includes(order.status);
+            }
 
-            return matchesSearch && matchesStatus;
+            // Status Filter
+            let matchesStatus = true;
+            if (viewMode === 'active') {
+                matchesStatus = statusFilter === 'ALL' || order.status === statusFilter;
+            } else {
+                matchesStatus = historyFilter === 'ALL' || order.status === historyFilter;
+            }
+
+            return matchesSearch && matchesView && matchesStatus;
         });
-    }, [orders, searchTerm, statusFilter]);
+    }, [orders, searchTerm, statusFilter, viewMode, historyFilter]);
 
     return (
         <div className="msme-container">
@@ -187,7 +226,49 @@ export default function MSMEPortal() {
                 </div>
             </div>
 
-            <h2 className="msme-section-title">My Shipments</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 className="msme-section-title" style={{ margin: 0 }}>
+                    {viewMode === 'active' ? 'Active Shipments' : 'Order History'}
+                </h2>
+                
+                {/* View Mode Tabs */}
+                <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <button
+                        onClick={() => setViewMode('active')}
+                        style={{
+                            padding: '8px 20px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: viewMode === 'active' ? 'white' : 'transparent',
+                            color: viewMode === 'active' ? '#2563eb' : '#64748b',
+                            fontWeight: 600,
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            boxShadow: viewMode === 'active' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Active Shipments
+                    </button>
+                    <button
+                        onClick={() => setViewMode('history')}
+                        style={{
+                            padding: '8px 20px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: viewMode === 'history' ? 'white' : 'transparent',
+                            color: viewMode === 'history' ? '#2563eb' : '#64748b',
+                            fontWeight: 600,
+                            fontSize: '0.9rem',
+                            cursor: 'pointer',
+                            boxShadow: viewMode === 'history' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        Order History
+                    </button>
+                </div>
+            </div>
 
             {/* Search and Filter Bar */}
             <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
@@ -199,27 +280,51 @@ export default function MSMEPortal() {
                     style={{ flex: 1, minWidth: '200px', height: '40px', borderRadius: '8px' }}
                 />
                 <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {['ALL', 'PENDING', 'ASSIGNED', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map(status => (
-                        <button
-                            key={status}
-                            onClick={() => setStatusFilter(status)}
-                            style={{
-                                padding: '0 16px',
-                                height: '40px',
-                                borderRadius: '8px',
-                                border: statusFilter === status ? 'none' : '1px solid #e2e8f0',
-                                background: statusFilter === status ? '#2563eb' : 'white',
-                                color: statusFilter === status ? 'white' : '#64748b',
-                                fontWeight: 600,
-                                fontSize: '0.9rem',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            {status === 'ALL' ? 'All Orders' : status.charAt(0) + status.slice(1).toLowerCase()}
-                        </button>
-                    ))}
+                    {viewMode === 'active' ? (
+                        ['ALL', 'PENDING', 'ASSIGNED', 'SHIPPED'].map(status => (
+                            <button
+                                key={status}
+                                onClick={() => setStatusFilter(status)}
+                                style={{
+                                    padding: '0 16px',
+                                    height: '40px',
+                                    borderRadius: '8px',
+                                    border: statusFilter === status ? 'none' : '1px solid #e2e8f0',
+                                    background: statusFilter === status ? '#2563eb' : 'white',
+                                    color: statusFilter === status ? 'white' : '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {status === 'ALL' ? 'All Active' : status.charAt(0) + status.slice(1).toLowerCase()}
+                            </button>
+                        ))
+                    ) : (
+                        ['ALL', 'DELIVERED', 'CANCELLED'].map(status => (
+                            <button
+                                key={status}
+                                onClick={() => setHistoryFilter(status)}
+                                style={{
+                                    padding: '0 16px',
+                                    height: '40px',
+                                    borderRadius: '8px',
+                                    border: historyFilter === status ? 'none' : '1px solid #e2e8f0',
+                                    background: historyFilter === status ? '#2563eb' : 'white',
+                                    color: historyFilter === status ? 'white' : '#64748b',
+                                    fontWeight: 600,
+                                    fontSize: '0.9rem',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {status === 'ALL' ? 'All History' : status.charAt(0) + status.slice(1).toLowerCase()}
+                            </button>
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -234,7 +339,12 @@ export default function MSMEPortal() {
             {/* Modals */}
             {/* Modals */}
             {showNewShipmentModal && (
-                <NewShipmentModal onClose={() => setShowNewShipmentModal(false)} onSuccess={handleCreate} suggestions={mapSuggestions} />
+                <NewShipmentModal 
+                    onClose={() => setShowNewShipmentModal(false)} 
+                    onSuccess={handleCreate} 
+                    suggestions={mapSuggestions}
+                    onError={(msg) => setNotification({ show: true, type: 'error', message: msg })}
+                />
             )}
 
             {/* Route View Modal */}
@@ -297,6 +407,62 @@ export default function MSMEPortal() {
                                     Estimated via Direct Path
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notification Modal */}
+            {notification.show && (
+                <div className="modal-overlay" style={{zIndex: 2000}}>
+                    <div className="modal-content" style={{ maxWidth: '400px', backgroundColor: 'white', padding: '1.5rem', borderRadius: '1rem', width: '90%', textAlign: 'center' }}>
+                        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                            {notification.type === 'error' ? (
+                                <div style={{ width: '50px', height: '50px', background: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+                                    <svg width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </div>
+                            ) : (
+                                <div style={{ width: '50px', height: '50px', background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a' }}>
+                                    <svg width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                </div>
+                            )}
+                        </div>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.5rem' }}>
+                            {notification.type === 'error' ? 'Error' : 'Success'}
+                        </h3>
+                        <p style={{ color: '#64748b', marginBottom: '1.5rem' }}>{notification.message}</p>
+                        <button 
+                            onClick={closeNotification}
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '0.75rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 500 }}
+                        >
+                            Okay
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Modal */}
+            {confirmation.show && (
+                <div className="modal-overlay" style={{zIndex: 2000}}>
+                    <div className="modal-content" style={{ maxWidth: '400px', backgroundColor: 'white', padding: '1.5rem', borderRadius: '1rem', width: '90%' }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#1e293b', marginBottom: '0.75rem' }}>{confirmation.title}</h3>
+                        <p style={{ color: '#64748b', marginBottom: '1.5rem', lineHeight: '1.5' }}>{confirmation.message}</p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                            <button 
+                                onClick={closeConfirmation}
+                                className="btn" 
+                                style={{ padding: '0.625rem 1.25rem', background: '#f1f5f9', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', color: '#475569', fontWeight: 500 }}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={confirmation.onConfirm}
+                                className="btn btn-primary" 
+                                style={{ padding: '0.625rem 1.25rem', background: '#2563eb', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 500 }}
+                            >
+                                Confirm
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -403,6 +569,7 @@ function ShipmentTable({ orders, onViewRoute, onCancel, onConfirm }) {
                                 
                                 {(order.status === 'PENDING' || order.status === 'ASSIGNED') && (
                                     <Button 
+                                        type="primary"
                                         danger 
                                         onClick={() => onCancel(order)}
                                         className="msme-action-btn"
@@ -449,7 +616,7 @@ function StatusBadge({ status }) {
     return <span className={`msme-status-badge ${classMap[status] || 'msme-status-pending'}`}>{status}</span>;
 }
 
-function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
+function NewShipmentModal({ onClose, onSuccess, suggestions = [], onError }) {
     const { token, user } = useAuth();
     const [pickupLocation, setPickupLocation] = useState(null);
     const [itemName, setItemName] = useState('');
@@ -665,8 +832,10 @@ function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
         if (!dropPincode) missingFields.push("Drop Pincode");
 
         if (missingFields.length > 0) {
-            alert(`Please fill the following required fields:\n- ${missingFields.join('\n- ')}`);
+        if (missingFields.length > 0) {
+            onError(`Please fill the following required fields:\n- ${missingFields.join('\n- ')}`);
             return;
+        }
         }
 
         setLoading(true);
@@ -698,8 +867,10 @@ function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
         } catch (err) {
             console.error(err);
             if (err.response?.status === 401) {
-                alert("Session expired. Please log out and log in again.");
+            if (err.response?.status === 401) {
+                onError("Session expired. Please log out and log in again.");
                 return;
+            }
             }
             let errorMsg = "Failed to create order";
             if (err.response?.data?.detail) {
@@ -714,7 +885,7 @@ function NewShipmentModal({ onClose, onSuccess, suggestions = [] }) {
             } else if (err.message) {
                 errorMsg = err.message;
             }
-            alert(`Error:\n${errorMsg}`);
+            onError(`Error:\n${errorMsg}`);
         } finally {
             setLoading(false);
         }

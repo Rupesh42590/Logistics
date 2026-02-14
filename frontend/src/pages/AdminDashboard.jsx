@@ -581,7 +581,7 @@ const VehicleDetailsModal = ({ vehicle, orders, drivers = [], onClose, onUpdate 
                     <button 
                         onClick={handleDeleteVehicle}
                         className="btn" 
-                        style={{ color: 'var(--error)', borderColor: 'var(--border)' }}
+                        style={{ backgroundColor: '#ef4444', color: 'white', border: 'none' }}
                     >
                         Delete Vehicle
                     </button>

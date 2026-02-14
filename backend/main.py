@@ -737,6 +737,56 @@ async def create_vehicle(vehicle: VehicleCreate, db: AsyncSession = Depends(get_
         utilization_percentage=0.0
     )
 
+@app.get("/driver/me/vehicle", response_model=VehicleResponse)
+async def get_my_vehicle(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Verify Driver
+    if current_user.role != models.UserRole.DRIVER:
+        raise HTTPException(status_code=403, detail="Only drivers can access this endpoint")
+
+    # Fetch Vehicle assigned to this driver
+    # Join with Zone to return full details
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(Vehicle)
+        .options(selectinload(Vehicle.zone))
+        .where(Vehicle.driver_id == current_user.id)
+    )
+    vehicle = result.scalars().first()
+    
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="No vehicle assigned to this driver")
+    
+    # Calculate Utilization (Optional, but nice to have)
+    # Get active orders (ASSIGNED, SHIPPED)
+    o_res = await db.execute(
+        select(Order).where(
+            Order.assigned_vehicle_id == vehicle.id,
+            Order.status.in_([models.OrderStatus.ASSIGNED, models.OrderStatus.SHIPPED])
+        )
+    )
+    active_orders = o_res.scalars().all()
+    current_volume = sum(o.volume_m3 for o in active_orders)
+    utilization = (current_volume / vehicle.max_volume_m3) * 100 if vehicle.max_volume_m3 > 0 else 0.0
+
+    zone_resp = None
+    if vehicle.zone:
+        zone_resp = ZoneResponse(
+            id=vehicle.zone.id,
+            name=vehicle.zone.name,
+            coordinates=json.loads(vehicle.zone.geometry_coords)
+        )
+
+    return VehicleResponse(
+        id=vehicle.id,
+        vehicle_number=vehicle.vehicle_number,
+        max_volume_m3=vehicle.max_volume_m3,
+        max_weight_kg=vehicle.max_weight_kg,
+        zone_id=vehicle.zone_id,
+        zone=zone_resp,
+        current_volume_m3=current_volume,
+        utilization_percentage=utilization
+    )
+
 @app.get("/vehicles", response_model=list[VehicleResponse])
 async def read_vehicles(db: AsyncSession = Depends(get_db)):
    # Join with Zone
@@ -976,7 +1026,9 @@ async def get_driver_orders(db: AsyncSession = Depends(get_db), current_user: Us
             drop_longitude=o.drop_longitude,
             drop_address=o.drop_address,
             latitude=lat,
-            longitude=lon
+            longitude=lon,
+            driver_confirmed_delivery=o.driver_confirmed_delivery,
+            user_confirmed_delivery=o.user_confirmed_delivery
         ))
     return response
 
